@@ -5,6 +5,18 @@ FROM golang:${GOLANG_VERSION}-alpine${ALPINE_VERSION} AS builder
 
 RUN apk add --no-cache make
 
+# Proxy configuration for go mod download
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ARG NO_PROXY
+ARG GOPROXY
+ENV HTTP_PROXY=${HTTP_PROXY}
+ENV HTTPS_PROXY=${HTTPS_PROXY}
+ENV NO_PROXY=${NO_PROXY}
+ENV GOPROXY=${GOPROXY}
+# Disable checksum verification for local development (proxy interference)
+ENV GOSUMDB=off
+
 # Cached golang dependencies
 WORKDIR /build/shared
 COPY ./shared/go.mod ./shared/go.sum ./

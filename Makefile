@@ -183,3 +183,64 @@ tidy:
 .PHONY: local-infra
 local-infra:
 	docker compose --file ./packages/local-dev/docker-compose.yaml up --abort-on-container-failure
+
+# ========================================
+# Local Deployment Targets
+# ========================================
+# These targets are for deploying E2B locally without cloud dependencies
+# See local-deploy/README.md for详细文档
+
+.PHONY: local-deploy-init
+local-deploy-init:
+	@echo "Initializing E2B local deployment..."
+	bash local-deploy/scripts/00-init-all.sh
+
+.PHONY: local-deploy-start
+local-deploy-start:
+	@echo "Starting all E2B services..."
+	bash local-deploy/scripts/start-all.sh
+
+.PHONY: local-deploy-stop
+local-deploy-stop:
+	@echo "Stopping all E2B services..."
+	bash local-deploy/scripts/stop-all.sh
+
+.PHONY: local-deploy-verify
+local-deploy-verify:
+	@echo "Verifying E2B deployment..."
+	bash local-deploy/scripts/verify-deployment.sh
+
+.PHONY: local-deploy-cleanup
+local-deploy-cleanup:
+	@echo "Cleaning up E2B temporary data..."
+	bash local-deploy/scripts/cleanup.sh
+
+.PHONY: local-deploy-logs
+local-deploy-logs:
+	@echo "Showing E2B logs..."
+	@tail -f /tmp/e2b-logs/*.log
+
+.PHONY: local-deploy-status
+local-deploy-status:
+	@echo "=== Nomad Jobs ==="
+	@nomad job status || echo "Nomad not running"
+	@echo ""
+	@echo "=== Consul Services ==="
+	@consul catalog services || echo "Consul not running"
+	@echo ""
+	@echo "=== Docker Services ==="
+	@docker compose -f ./packages/local-dev/docker-compose.yaml ps
+
+.PHONY: local-deploy-help
+local-deploy-help:
+	@echo "E2B Local Deployment Commands:"
+	@echo ""
+	@echo "  make local-deploy-init     - Initialize local deployment (first time setup)"
+	@echo "  make local-deploy-start    - Start all services"
+	@echo "  make local-deploy-stop     - Stop all services"
+	@echo "  make local-deploy-verify   - Verify deployment status"
+	@echo "  make local-deploy-status   - Show current service status"
+	@echo "  make local-deploy-logs     - Tail all logs"
+	@echo "  make local-deploy-cleanup  - Clean up temporary data"
+	@echo ""
+	@echo "For detailed documentation, see local-deploy/README.md"

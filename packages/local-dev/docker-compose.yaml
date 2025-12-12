@@ -113,6 +113,16 @@ services:
     volumes:
       - ./vector.toml:/etc/vector.toml
 
+  nginx:
+    image: nginx:alpine
+    container_name: e2b-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ../../local-deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    restart: unless-stopped
+    network_mode: host
+
 
 volumes:
   clickhouse: { }
