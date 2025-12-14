@@ -45,6 +45,7 @@ job "api" {
 
       config {
         image = "e2b-db-migrator:local"  # 本地构建的镜像
+        force_pull = false  # 使用本地镜像，不从远程拉取
 
         # 使用host网络以便访问localhost的数据库
         network_mode = "host"
@@ -66,6 +67,7 @@ job "api" {
 
       config {
         image = "e2b-api:local"  # 本地构建的镜像
+        force_pull = false  # 使用本地镜像，不从远程拉取
 
         # 使用host网络以便访问localhost的基础设施服务
         network_mode = "host"

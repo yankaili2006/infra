@@ -53,6 +53,7 @@ job "client-proxy" {
       # 环境变量
       env {
         NODE_ID     = "${node.unique.id}"
+        NODE_IP     = "192.168.99.5"
         ENVIRONMENT = "local"
 
         # 服务端口
@@ -72,9 +73,18 @@ job "client-proxy" {
         LOGS_COLLECTOR_ADDRESS       = "http://127.0.0.1:30006"
         OTEL_TRACING_PRINT           = "false"
 
-        # 本地开发使用静态服务发现
-        # Client-Proxy通过Consul发现orchestrator实例
+        # 本地开发使用Nomad服务发现（Nomad通过Consul进行服务发现）
+        # Client-Proxy通过Nomad+Consul发现orchestrator实例
         ORCHESTRATOR_SERVICE_NAME = "orchestrator"
+        SD_ORCHESTRATOR_PROVIDER = "NOMAD"
+
+        # Nomad配置
+        SD_ORCHESTRATOR_NOMAD_ENDPOINT = "http://127.0.0.1:4646"
+        SD_ORCHESTRATOR_NOMAD_TOKEN = "local-dev-no-acl"  # Dev mode无需真实token，但代码要求非空
+        SD_ORCHESTRATOR_NOMAD_JOB_PREFIX = "orchestrator"  # orchestrator job的名称
+
+        # Loki日志收集器配置 (本地开发可选)
+        LOKI_URL = "http://127.0.0.1:3100"
 
         # 禁用外部服务
         POSTHOG_API_KEY               = ""

@@ -42,7 +42,8 @@ job "orchestrator" {
       driver = "raw_exec"  # 需要直接访问系统资源
 
       config {
-        command = "/home/primihub/pcloud/infra/packages/orchestrator/bin/orchestrator"
+        command = "sudo"
+        args    = ["-E", "/home/primihub/pcloud/infra/packages/orchestrator/bin/orchestrator"]
       }
 
       env {

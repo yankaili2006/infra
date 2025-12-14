@@ -34,12 +34,12 @@ echo "启动 Consul (dev 模式)..."
 echo "数据目录: $DATA_DIR"
 echo ""
 
-# 后台启动 Consul
+# 后台启动 Consul（绑定到主网卡，允许所有接口的客户端访问）
 nohup consul agent \
     -dev \
     -data-dir="$DATA_DIR" \
-    -bind=127.0.0.1 \
-    -client=127.0.0.1 \
+    -bind=192.168.99.5 \
+    -client=0.0.0.0 \
     > /tmp/e2b-logs/consul.log 2>&1 &
 
 CONSUL_PID=$!
