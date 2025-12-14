@@ -964,13 +964,13 @@ func getNetworkSlotAsync(
 			ctx, span := tracer.Start(ctx, "network-slot-clean")
 			defer span.End()
 
-			// We can run this cleanup asynchronously, as it is not important for the sandbox lifecycle
-			go func(ctx context.Context) {
-				returnErr := networkPool.Return(ctx, ips)
-				if returnErr != nil {
-					logger.L().Error(ctx, "failed to return network slot", zap.Error(returnErr))
-				}
-			}(context.WithoutCancel(ctx))
+			// Return the network slot synchronously to ensure cleanup happens
+			// even if the process is terminated shortly after
+			returnErr := networkPool.Return(ctx, ips)
+			if returnErr != nil {
+				logger.L().Error(ctx, "failed to return network slot", zap.Error(returnErr))
+				return returnErr
+			}
 
 			return nil
 		})

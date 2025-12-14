@@ -63,6 +63,67 @@ EOT
       }
     }
 
+    # Cleanup orphaned network namespaces before starting orchestrator
+    task "cleanup-network" {
+      driver = "raw_exec"
+
+      lifecycle {
+        hook    = "prestart"
+        sidecar = false
+      }
+
+      restart {
+        attempts = 0
+      }
+
+      template {
+        destination = "local/cleanup-network.sh"
+        data = <<EOT
+#!/bin/bash
+# Cleanup orphaned network namespaces from previous orchestrator runs
+
+echo "Cleaning up orphaned network namespaces..."
+
+# Count initial state
+INITIAL_NETNS=$(ip netns list 2>/dev/null | grep -c "^ns-" || echo "0")
+echo "Found $INITIAL_NETNS orphaned namespaces"
+
+if [ "$INITIAL_NETNS" -eq 0 ]; then
+  echo "No orphaned namespaces to clean"
+  exit 0
+fi
+
+# Unmount and delete all ns-* namespaces
+CLEANED=0
+for ns in $(ip netns list 2>/dev/null | grep "^ns-" | awk '{print $1}'); do
+  umount "/run/netns/$ns" 2>/dev/null || true
+  rm -f "/run/netns/$ns" 2>/dev/null && CLEANED=$((CLEANED + 1))
+done
+
+# Clean up orphaned veth devices
+VETHS=$(ip link show 2>/dev/null | grep -o "^[0-9]*: veth[^@:]*" | awk '{print $2}' || echo "")
+VETH_COUNT=0
+for veth in $VETHS; do
+  if [ -n "$veth" ]; then
+    ip link delete "$veth" 2>/dev/null && VETH_COUNT=$((VETH_COUNT + 1))
+  fi
+done
+
+echo "Cleanup complete: removed $CLEANED namespaces and $VETH_COUNT veth devices"
+EOT
+      }
+
+      config {
+        command = "/bin/bash"
+        args    = ["local/cleanup-network.sh"]
+      }
+
+      resources {
+        cpu    = 100
+        memory = 128
+      }
+    }
+
     task "start" {
       driver = "raw_exec"
 

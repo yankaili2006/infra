@@ -7,6 +7,7 @@ job "orchestrator" {
   group "orchestrator" {
 
     network {
+      mode = "host"  # 使用宿主机网络，避免网络隔离问题
       port "grpc" {
         static = 5008
       }
