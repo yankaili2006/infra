@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
@@ -68,6 +69,9 @@ func NewRedisClient(ctx context.Context, config RedisConfig) (redis.UniversalCli
 		redisClient = redis.NewClient(&redis.Options{
 			Addr:         config.RedisURL,
 			MinIdleConns: 1,
+			DialTimeout:  30 * time.Second,
+			ReadTimeout:  30 * time.Second,
+			WriteTimeout: 30 * time.Second,
 		})
 	default:
 		return nil, ErrRedisDisabled

@@ -20,19 +20,19 @@ ENV GOSUMDB=off
 # Cached golang dependencies
 WORKDIR /build/shared
 COPY ./shared/go.mod ./shared/go.sum ./
-RUN go mod download
+RUN go env -w GOSUMDB=off && go mod download
 
 WORKDIR /build/clickhouse
 COPY ./clickhouse/go.mod ./clickhouse/go.sum ./
-RUN go mod download
+RUN go env -w GOSUMDB=off && go mod download
 
 WORKDIR /build/db
 COPY ./db/go.mod ./db/go.sum ./
-RUN go mod download
+RUN go env -w GOSUMDB=off && go mod download
 
 WORKDIR /build/api
 COPY ./api/go.mod ./api/go.sum ./
-RUN go mod download
+RUN go env -w GOSUMDB=off && go mod download
 
 # Copy source code
 WORKDIR /build

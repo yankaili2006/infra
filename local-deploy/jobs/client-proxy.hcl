@@ -95,6 +95,9 @@ job "client-proxy" {
         # API连接配置（用于路由验证）
         API_URL = "http://127.0.0.1:3000"
 
+        # Edge API认证密钥（必须与API中的LOCAL_CLUSTER_TOKEN匹配）
+        EDGE_SECRET = "--edge-secret--"
+
         # 超时配置
         REQUEST_TIMEOUT = "30s"
 

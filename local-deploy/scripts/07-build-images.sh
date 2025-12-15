@@ -95,10 +95,13 @@ for image in "${!IMAGES[@]}"; do
 
     if docker build \
         -t "$image" \
-        --build-arg HTTP_PROXY="http://${HOST_IP}:7890" \
-        --build-arg HTTPS_PROXY="http://${HOST_IP}:7890" \
+        --build-arg HTTP_PROXY="" \
+        --build-arg HTTPS_PROXY="" \
+        --build-arg http_proxy="" \
+        --build-arg https_proxy="" \
         --build-arg NO_PROXY="${NO_PROXY_DOMAINS}" \
-        --build-arg GOPROXY="https://goproxy.io,https://proxy.golang.org,direct" \
+        --build-arg GOSUMDB=off \
+        --build-arg GOPROXY="https://goproxy.cn,direct" \
         -f "$PROJECT_ROOT/$dockerfile" \
         "$PROJECT_ROOT/$context"; then
 

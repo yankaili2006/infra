@@ -33,7 +33,7 @@ import (
 )
 
 const (
-	baseImage = "e2bdev/base:latest"
+	baseImage = "ubuntu:22.04"
 
 	proxyPort = 5007
 )
@@ -72,7 +72,7 @@ func buildTemplate(
 	builderConfig cfg.BuilderConfig,
 	networkConfig network.Config,
 ) error {
-	ctx, cancel := context.WithTimeout(parentCtx, time.Minute*5)
+	ctx, cancel := context.WithTimeout(parentCtx, time.Minute*30)
 	defer cancel()
 
 	clientID := "build-template-cmd"
