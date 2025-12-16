@@ -49,6 +49,11 @@ job "template-manager" {
         STORAGE_PROVIDER            = "Local"
         ARTIFACTS_REGISTRY_PROVIDER = "Local"
 
+        # 确保使用本地存储，不尝试连接GCP
+        GOOGLE_APPLICATION_CREDENTIALS = ""
+        GCP_PROJECT_ID = ""
+        GCP_REGION = ""
+
         # 本地路径配置
         FIRECRACKER_VERSIONS_DIR = "/home/primihub/pcloud/infra/packages/fc-versions/builds"
         HOST_ENVD_PATH           = "/home/primihub/pcloud/infra/packages/envd/bin/envd"
@@ -76,6 +81,9 @@ job "template-manager" {
 
         # 端口配置
         GRPC_PORT = "5009"
+
+        # Template Manager specific config
+        HYPERLOOP_SERVER_PORT = "5011"  # 使用不同的端口避免冲突
 
         # 服务标识
         ORCHESTRATOR_SERVICES = "template-manager"

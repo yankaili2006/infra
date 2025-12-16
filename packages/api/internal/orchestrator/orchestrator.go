@@ -284,21 +284,25 @@ func getBestOfKConfig(ctx context.Context, featureFlagsClient *featureflags.Clie
 	maxOvercommitPercent, err := featureFlagsClient.IntFlag(ctx, featureflags.BestOfKMaxOvercommit)
 	if err != nil {
 		logger.L().Error(ctx, "Failed to get BestOfKMaxOvercommit flag", zap.Error(err))
+		maxOvercommitPercent = 400 // 4x overcommit for local dev
 	}
 
 	alphaPercent, err := featureFlagsClient.IntFlag(ctx, featureflags.BestOfKAlpha)
 	if err != nil {
 		logger.L().Error(ctx, "Failed to get BestOfKAlpha flag", zap.Error(err))
+		alphaPercent = 50 // 0.5 alpha
 	}
 
 	canFit, err := featureFlagsClient.BoolFlag(ctx, featureflags.BestOfKCanFit)
 	if err != nil {
 		logger.L().Error(ctx, "Failed to get BestOfKCanFit flag", zap.Error(err))
+		canFit = false // Disable CanFit check for local dev
 	}
 
 	tooManyStarting, err := featureFlagsClient.BoolFlag(ctx, featureflags.BestOfKTooManyStarting)
 	if err != nil {
 		logger.L().Error(ctx, "Failed to get BestOfKTooManyStarting flag", zap.Error(err))
+		tooManyStarting = false // Disable starting limit for local dev
 	}
 
 	// Convert percentage to decimal

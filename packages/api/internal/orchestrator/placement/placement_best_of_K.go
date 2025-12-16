@@ -120,8 +120,12 @@ func (b *BestOfK) chooseNode(_ context.Context, nodes []*nodemanager.Node, exclu
 	// Fix the config, we want to dynamically update it
 	config := b.getConfig()
 
+	fmt.Printf("DEBUG: chooseNode starting with %d nodes\n", len(nodes))
+
 	// Filter eligible nodes
 	candidates := b.sample(nodes, config, excludedNodes, resources, buildMachineInfo)
+
+	fmt.Printf("DEBUG: chooseNode got %d candidates from sample\n", len(candidates))
 
 	// Find the best node among candidates
 	bestScore := math.MaxFloat64
@@ -130,16 +134,21 @@ func (b *BestOfK) chooseNode(_ context.Context, nodes []*nodemanager.Node, exclu
 		// Calculate score
 		score := b.Score(node, resources, config)
 
+		fmt.Printf("DEBUG: Node %s has score %f\n", node.ID, score)
+
 		if score < bestScore {
 			bestNode = node
 			bestScore = score
+			fmt.Printf("DEBUG: Node %s is now best with score %f\n", node.ID, score)
 		}
 	}
 
 	if bestNode == nil {
+		fmt.Printf("DEBUG: No best node selected, returning error\n")
 		return nil, fmt.Errorf("no node available")
 	}
 
+	fmt.Printf("DEBUG: Selected best node %s with score %f\n", bestNode.ID, bestScore)
 	return bestNode, nil
 }
 
@@ -148,6 +157,11 @@ func (b *BestOfK) sample(items []*nodemanager.Node, config BestOfKConfig, exclud
 	if config.K <= 0 || len(items) == 0 {
 		return nil
 	}
+
+	// Debug logging for placement
+	fmt.Printf("DEBUG: Starting sample with %d nodes, config: K=%d, CanFit=%t, TooManyStarting=%t\n",
+		len(items), config.K, config.CanFit, config.TooManyStarting)
+
 	indices := make([]int, len(items))
 	for i := range indices {
 		indices[i] = i
@@ -167,23 +181,29 @@ func (b *BestOfK) sample(items []*nodemanager.Node, config BestOfKConfig, exclud
 
 		n := items[pick]
 
+		fmt.Printf("DEBUG: Evaluating node %s (ID: %s, Status: %s)\n", n.ID, n.ID, n.Status())
+
 		// Excluded filter
 		if _, ok := excludedNodes[n.ID]; ok {
+			fmt.Printf("DEBUG: Node %s excluded\n", n.ID)
 			continue
 		}
 
 		// If the node is not ready, skip it
 		if n.Status() != api.NodeStatusReady {
+			fmt.Printf("DEBUG: Node %s not ready, status: %s\n", n.ID, n.Status())
 			continue
 		}
 
 		// Skip if node is not CPU compatible
 		if !isNodeCPUCompatible(n, buildMachineInfo) {
+			fmt.Printf("DEBUG: Node %s not CPU compatible\n", n.ID)
 			continue
 		}
 
 		if config.CanFit {
 			if !b.CanFit(n, resources, config) {
+				fmt.Printf("DEBUG: Node %s cannot fit resources\n", n.ID)
 				continue
 			}
 		}
@@ -191,12 +211,15 @@ func (b *BestOfK) sample(items []*nodemanager.Node, config BestOfKConfig, exclud
 		if config.TooManyStarting {
 			// To prevent overloading the node
 			if n.PlacementMetrics.InProgressCount() > maxStartingInstancesPerNode {
+				fmt.Printf("DEBUG: Node %s has too many starting instances\n", n.ID)
 				continue
 			}
 		}
 
+		fmt.Printf("DEBUG: Node %s added to candidates\n", n.ID)
 		candidates = append(candidates, n)
 	}
 
+	fmt.Printf("DEBUG: Sample completed, found %d candidates\n", len(candidates))
 	return candidates
 }

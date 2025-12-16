@@ -16,6 +16,7 @@ job "api" {
     }
 
     network {
+      mode = "host"
       port "http" {
         static = 3000
       }
@@ -34,49 +35,40 @@ job "api" {
       }
     }
 
-    # 数据库迁移任务（prestart）
-    task "db-migrator" {
-      driver = "docker"
-
-      lifecycle {
-        hook    = "prestart"
-        sidecar = false
-      }
-
-      config {
-        image = "e2b-db-migrator:local"  # 本地构建的镜像
-        force_pull = false  # 使用本地镜像，不从远程拉取
-
-        # 使用host网络以便访问localhost的数据库
-        network_mode = "host"
-      }
-
-      env {
-        POSTGRES_CONNECTION_STRING = "postgres://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable"
-      }
-
-      resources {
-        cpu    = 250
-        memory = 128
-      }
-    }
+    # 数据库迁移任务（prestart）- 暂时禁用
+    # task "db-migrator" {
+    #   driver = "docker"
+    #
+    #   lifecycle {
+    #     hook    = "prestart"
+    #     sidecar = false
+    #   }
+    #
+    #   config {
+    #     image = "e2b-db-migrator:local"  # 本地构建的镜像
+    #     force_pull = false  # 使用本地镜像，不从远程拉取
+    #
+    #     # 使用host网络以便访问localhost的数据库
+    #     network_mode = "host"
+    #   }
+    #
+    #   env {
+    #     POSTGRES_CONNECTION_STRING = "postgres://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable"
+    #   }
+    #
+    #   resources {
+    #     cpu    = 250
+    #     memory = 128
+    #   }
+    # }
 
     # API主任务
     task "api" {
-      driver = "docker"
+      driver = "raw_exec"
 
       config {
-        image = "e2b-api:local"  # 本地构建的镜像
-        force_pull = false  # 使用本地镜像，不从远程拉取
-
-        # 使用host网络以便访问localhost的基础设施服务
-        network_mode = "host"
-
-        ports = ["http"]
-
-        args = [
-          "--port", "3000",
-        ]
+        command = "/home/primihub/pcloud/infra/packages/api/bin/api"
+        args     = ["--port", "3000"]
       }
 
       # 环境变量
@@ -121,6 +113,13 @@ job "api" {
 
         # 模板bucket（本地不需要但代码可能需要）
         TEMPLATE_BUCKET_NAME = "skip"
+
+        # 存储配置（使用本地文件系统）
+        STORAGE_PROVIDER            = "Local"
+        ARTIFACTS_REGISTRY_PROVIDER = "Local"
+        LOCAL_TEMPLATE_STORAGE_BASE_PATH = "/tmp/e2b-template-storage"
+        BUILD_CACHE_BUCKET_NAME    = "/tmp/e2b-build-cache"
+        TEMPLATE_CACHE_DIR         = "/tmp/e2b-template-cache"
 
         # 默认版本
         DEFAULT_KERNEL_VERSION      = "vmlinux-6.1.158"

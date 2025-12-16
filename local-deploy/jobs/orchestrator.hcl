@@ -85,8 +85,8 @@ job "orchestrator" {
         GRPC_PORT  = "5008"
         PROXY_PORT = "5007"
 
-        # 服务列表
-        ORCHESTRATOR_SERVICES = "orchestrator,template-manager"
+        # 服务列表 - 移除template-manager，让其独立运行
+        ORCHESTRATOR_SERVICES = "orchestrator"
 
         # 超时配置
         ENVD_TIMEOUT = "10s"
