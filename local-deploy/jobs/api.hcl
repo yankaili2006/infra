@@ -74,7 +74,7 @@ job "api" {
       # 环境变量
       env {
         NODE_ID     = "${node.unique.id}"
-        ENVIRONMENT = "local"
+        ENVIRONMENT = "development"
 
         # 数据库连接
         POSTGRES_CONNECTION_STRING   = "postgres://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable"
