@@ -497,24 +497,49 @@ func (f *Factory) ResumeSandbox(
 
 	// todo: check if kernel, firecracker, and envd versions exist
 	snapfile, err := t.Snapfile()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get snapfile: %w", err)
+
+	// Try resume from snapshot if available, otherwise cold start
+	var fcStartErr error
+	if err != nil || snapfile == nil {
+		// Cold start without snapshot
+		telemetry.ReportEvent(ctx, "using cold start (no snapshot)")
+
+		fcStartErr = fcHandle.Create(
+			uffdStartCtx,
+			sbxlogger.SandboxMetadata{
+				SandboxID:  runtime.SandboxID,
+				TemplateID: runtime.TemplateID,
+				TeamID:     runtime.TeamID,
+			},
+			config.Vcpu,
+			config.RamMB,
+			config.HugePages,
+			fc.ProcessOptions{
+				IoEngine: nil,
+				InitScriptPath: "",
+				KernelLogs: false,
+				SystemdToKernelLogs: false,
+				KvmClock: false,
+				Stdout: nil,
+				Stderr: nil,
+			},
+		)
+	} else {
+		telemetry.ReportEvent(ctx, "got snapfile")
+
+		fcStartErr = fcHandle.Resume(
+			uffdStartCtx,
+			sbxlogger.SandboxMetadata{
+				SandboxID:  runtime.SandboxID,
+				TemplateID: runtime.TemplateID,
+				TeamID:     runtime.TeamID,
+			},
+			fcUffdPath,
+			snapfile,
+			fcUffd.Ready(),
+			ips.slot,
+		)
 	}
-
-	telemetry.ReportEvent(ctx, "got snapfile")
-
-	fcStartErr := fcHandle.Resume(
-		uffdStartCtx,
-		sbxlogger.SandboxMetadata{
-			SandboxID:  runtime.SandboxID,
-			TemplateID: runtime.TemplateID,
-			TeamID:     runtime.TeamID,
-		},
-		fcUffdPath,
-		snapfile,
-		fcUffd.Ready(),
-		ips.slot,
-	)
 	if fcStartErr != nil {
 		return nil, fmt.Errorf("failed to start FC: %w", fcStartErr)
 	}

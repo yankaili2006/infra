@@ -94,7 +94,7 @@ func (s *Server) Create(ctx context.Context, req *orchestrator.SandboxCreateRequ
 		req.GetSandbox().GetBuildId(),
 		req.GetSandbox().GetKernelVersion(),
 		req.GetSandbox().GetFirecrackerVersion(),
-		req.GetSandbox().GetSnapshot(),
+		false, // Force cold start without snapshot
 		false,
 	)
 	if err != nil {

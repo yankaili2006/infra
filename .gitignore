@@ -15,3 +15,6 @@ go.work.sum
 .infisical.json
 .vscode/mise-tools
 /packages/fc-kernels
+
+bionic.rootfs.ext4
+vmlinux-5.10.bin.1

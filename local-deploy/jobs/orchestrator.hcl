@@ -64,6 +64,7 @@ job "orchestrator" {
 
         # 缓存目录
         LOCAL_TEMPLATE_STORAGE_BASE_PATH = "/tmp/e2b-template-storage"
+        BUILD_CACHE_BUCKET_NAME          = "/tmp/e2b-build-cache"
         SANDBOX_CACHE_DIR                = "/tmp/e2b-sandbox-cache"
         SNAPSHOT_CACHE_DIR               = "/tmp/e2b-snapshot-cache"
         TEMPLATE_CACHE_DIR               = "/tmp/e2b-template-cache"
