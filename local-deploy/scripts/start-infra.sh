@@ -14,7 +14,7 @@ echo "=========================================="
 echo ""
 
 # 项目路径
-PROJECT_ROOT="/home/primihub/pcloud/infra"
+PROJECT_ROOT="/root/pcloud/infra"
 COMPOSE_DIR="$PROJECT_ROOT/packages/local-dev"
 
 cd "$COMPOSE_DIR"
