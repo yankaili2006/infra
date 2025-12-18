@@ -22,7 +22,7 @@ import (
 
 // maxSlotsReady is the number of slots that are ready to be used.
 const (
-	maxSlotsReady                 = 64
+	maxSlotsReady                 = 1
 	waitOnNBDError                = 50 * time.Millisecond
 	devicePoolCloseReleaseTimeout = 10 * time.Minute
 )

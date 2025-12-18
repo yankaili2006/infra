@@ -14,3 +14,7 @@ use (
 
 	./tests/integration
 )
+
+replace cloud.google.com/go/storage => cloud.google.com/go/storage v1.30.0
+
+replace cloud.google.com/go => cloud.google.com/go v0.110.1
