@@ -2,7 +2,7 @@ job "api" {
   datacenters = ["dc1"]
   type        = "service"
   priority    = 90
-  node_pool   = "local-dev"
+  node_pool   = "default"
 
   # 本地开发只需要1个实例
   group "api-service" {

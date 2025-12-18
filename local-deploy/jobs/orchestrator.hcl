@@ -2,7 +2,7 @@ job "orchestrator" {
   datacenters = ["dc1"]
   type        = "system"  # 每个client节点一个（dev模式只有1个节点）
   priority    = 90
-  node_pool   = "local-dev"
+  node_pool   = "default"
 
   group "orchestrator" {
 
