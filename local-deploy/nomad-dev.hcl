@@ -8,8 +8,8 @@ data_dir = "/tmp/nomad-local"
 log_level = "INFO"
 log_json  = false
 
-# 地址绑定（0.0.0.0 允许外部访问）
-bind_addr = "0.0.0.0"
+# 地址绑定（127.0.0.1 本地访问）
+bind_addr = "127.0.0.1"
 
 # 服务器配置（dev模式同时是server和client）
 server {
