@@ -20,7 +20,7 @@ if ! command -v consul &> /dev/null; then
 fi
 
 # 数据目录
-DATA_DIR="/tmp/consul-local"
+DATA_DIR="/mnt/sdb/e2b-storage/consul-local"
 mkdir -p "$DATA_DIR"
 
 # 检查是否已经在运行
@@ -38,9 +38,9 @@ echo ""
 nohup consul agent \
     -dev \
     -data-dir="$DATA_DIR" \
-    -bind=192.168.99.5 \
+    -bind=127.0.0.1 \
     -client=0.0.0.0 \
-    > /tmp/e2b-logs/consul.log 2>&1 &
+    > /mnt/sdb/e2b-storage/logs/consul.log 2>&1 &
 
 CONSUL_PID=$!
 echo "Consul PID: $CONSUL_PID"
@@ -72,8 +72,8 @@ echo ""
 echo -e "${GREEN}✓ Consul 已启动${NC}"
 echo ""
 echo "访问地址: http://localhost:8500"
-echo "日志文件: /tmp/e2b-logs/consul.log"
+echo "日志文件: /mnt/sdb/e2b-storage/logs/consul.log"
 echo ""
-echo "查看日志: tail -f /tmp/e2b-logs/consul.log"
+echo "查看日志: tail -f /mnt/sdb/e2b-storage/logs/consul.log"
 echo "停止服务: pkill consul"
 echo ""

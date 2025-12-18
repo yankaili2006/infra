@@ -2,7 +2,7 @@
 # 单节点本地开发环境
 
 # 数据目录
-data_dir = "/tmp/nomad-local"
+data_dir = "/mnt/sdb/e2b-storage/nomad-local"
 
 # 日志配置
 log_level = "INFO"

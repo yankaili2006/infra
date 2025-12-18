@@ -37,7 +37,7 @@ func NewAnalytics(ctx context.Context, host, grpcAPIKey string) (*Analytics, err
 			MinVersion: tls.VersionTLS13,
 		})
 
-		conn, err := grpc.NewClient(
+		conn, err := grpc.Dial(
 			fmt.Sprintf("%s:443", host),
 			grpc.WithPerRPCCredentials(newGRPCAPIKey(grpcAPIKey)),
 			grpc.WithAuthority(host),

@@ -47,7 +47,7 @@ echo "Consul 版本: $CONSUL_VERSION"
 echo ""
 
 # 临时下载目录
-TMP_DIR="/tmp/e2b-hashicorp-install"
+TMP_DIR="/mnt/sdb/e2b-storage/e2b-hashicorp-install"
 mkdir -p "$TMP_DIR"
 
 # 1. 安装 Nomad
@@ -186,8 +186,8 @@ echo ""
 # 4. 创建数据目录
 echo "4. 创建数据目录..."
 
-NOMAD_DATA_DIR="/tmp/nomad-local"
-CONSUL_DATA_DIR="/tmp/consul-local"
+NOMAD_DATA_DIR="/mnt/sdb/e2b-storage/nomad-local"
+CONSUL_DATA_DIR="/mnt/sdb/e2b-storage/consul-local"
 
 mkdir -p "$NOMAD_DATA_DIR"
 mkdir -p "$CONSUL_DATA_DIR"
@@ -205,7 +205,7 @@ echo ""
 # 5. 验证配置文件
 echo "5. 验证配置文件..."
 
-NOMAD_CONFIG="/home/primihub/pcloud/infra/local-deploy/nomad-dev.hcl"
+NOMAD_CONFIG="/mnt/sdb/pcloud/infra/local-deploy/nomad-dev.hcl"
 
 if [ -f "$NOMAD_CONFIG" ]; then
     echo "验证 Nomad 配置: $NOMAD_CONFIG"

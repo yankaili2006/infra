@@ -1,6 +1,7 @@
 go 1.25.4
 
 use (
+	./local-deploy
 	./packages/api
 	./packages/clickhouse
 	./packages/client-proxy

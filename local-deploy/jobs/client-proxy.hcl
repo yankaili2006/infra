@@ -35,16 +35,10 @@ job "client-proxy" {
     }
 
     task "client-proxy" {
-      driver = "docker"
+      driver = "raw_exec"
 
       config {
-        image = "e2b-client-proxy:local"  # 本地构建的镜像
-
-        # 使用host网络以便访问localhost的基础设施服务
-        network_mode = "host"
-
-        ports = ["http"]
-
+        command = "/mnt/sdb/pcloud/infra/packages/client-proxy/bin/client-proxy"
         args = [
           "--port", "3002",
         ]
@@ -53,7 +47,7 @@ job "client-proxy" {
       # 环境变量
       env {
         NODE_ID     = "${node.unique.id}"
-        NODE_IP     = "192.168.99.5"
+        NODE_IP     = "127.0.0.1"
         ENVIRONMENT = "local"
 
         # 服务端口

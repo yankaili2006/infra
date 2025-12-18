@@ -12,7 +12,7 @@ echo "=========================================="
 echo ""
 
 # 项目路径
-PROJECT_ROOT="/home/primihub/pcloud/infra"
+PROJECT_ROOT="/mnt/sdb/pcloud/infra"
 COMPOSE_DIR="$PROJECT_ROOT/packages/local-dev"
 
 # 1. 停止 Nomad Jobs

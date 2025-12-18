@@ -115,7 +115,7 @@ echo "Primihub@2022." | sudo -S docker run -d --name ubuntu-template-base ubuntu
 echo "Primihub@2022." | sudo -S docker export ubuntu-template-base | gzip > /tmp/ubuntu-rootfs.tar.gz
 
 # 2. 创建 ext4 根文件系统
-TEMPLATE_DIR="/tmp/e2b-template-storage/9ac9c8b9-9b8b-476c-9238-8266af308c32"
+TEMPLATE_DIR="/mnt/sdb/e2b-storage/e2b-template-storage/9ac9c8b9-9b8b-476c-9238-8266af308c32"
 echo "Primihub@2022." | sudo -S mkdir -p "$TEMPLATE_DIR"
 echo "Primihub@2022." | sudo -S dd if=/dev/zero of="$TEMPLATE_DIR/rootfs.ext4" bs=1M count=1024
 echo "Primihub@2022." | sudo -S mkfs.ext4 -F "$TEMPLATE_DIR/rootfs.ext4"
@@ -294,7 +294,7 @@ echo "Primihub@2022." | sudo -S docker run -d --name ubuntu-template-base ubuntu
 echo "Primihub@2022." | sudo -S docker export ubuntu-template-base | gzip > /tmp/ubuntu-rootfs.tar.gz
 
 # 创建模板目录
-TEMPLATE_DIR="/tmp/e2b-template-storage/9ac9c8b9-9b8b-476c-9238-8266af308c32"
+TEMPLATE_DIR="/mnt/sdb/e2b-storage/e2b-template-storage/9ac9c8b9-9b8b-476c-9238-8266af308c32"
 echo "Primihub@2022." | sudo -S mkdir -p "$TEMPLATE_DIR"
 
 # 创建 rootfs.ext4

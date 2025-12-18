@@ -164,7 +164,7 @@ func getMappedStatus(ctx context.Context, s e2bgrpcorchestratorinfo.ServiceInfoS
 }
 
 func newClient(tracerProvider trace.TracerProvider, meterProvider metric.MeterProvider, host string) (*OrchestratorGRPCClient, error) {
-	conn, err := grpc.NewClient(host,
+	conn, err := grpc.Dial(host,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithStatsHandler(
 			otelgrpc.NewClientHandler(

@@ -29,13 +29,13 @@ type PosthogClient struct {
 }
 
 func NewPosthogClient(ctx context.Context, posthogAPIKey string) (*PosthogClient, error) {
-	posthogLogger := posthog.StdLogger(log.New(os.Stderr, "posthog ", log.LstdFlags))
+	posthogLogger := posthog.StdLogger(log.New(os.Stderr, "posthog ", log.LstdFlags), false)
 
 	if strings.TrimSpace(posthogAPIKey) == "" {
 		logger.L().Info(ctx, "No Posthog API key provided, silencing logs")
 
 		writer := &utils.NoOpWriter{}
-		posthogLogger = posthog.StdLogger(log.New(writer, "posthog ", log.LstdFlags))
+		posthogLogger = posthog.StdLogger(log.New(writer, "posthog ", log.LstdFlags), false)
 	}
 
 	client, err := posthog.NewWithConfig(posthogAPIKey, posthog.Config{

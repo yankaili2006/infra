@@ -59,7 +59,7 @@ func createClusterClient(tel *telemetry.Client, auth clientAuthorization, endpoi
 		grpcOptions = append(grpcOptions, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	}
 
-	conn, err := grpc.NewClient(endpoint, grpcOptions...)
+	conn, err := grpc.Dial(endpoint, grpcOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create grpc client: %w", err)
 	}

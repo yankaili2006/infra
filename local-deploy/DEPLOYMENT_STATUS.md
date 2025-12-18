@@ -26,7 +26,7 @@
 - `/etc/udev/rules.d/99-kvm.rules` - KVM device permissions
 
 ### 4. Storage Directories
-Created in `/tmp/e2b-*`:
+Created in `/mnt/sdb/e2b-storage/e2b-*`:
 - template-storage, build-cache
 - orchestrator, sandbox-cache
 - snapshot-cache, template-cache
@@ -100,7 +100,7 @@ redis:7.4.2              175MB
 
 ### 1. Start Consul (Dev Mode)
 ```bash
-consul agent -dev -bind=127.0.0.1 -data-dir=/tmp/consul-local > /tmp/consul.log 2>&1 &
+consul agent -dev -bind=127.0.0.1 -data-dir=/mnt/sdb/e2b-storage/consul-local > /tmp/consul.log 2>&1 &
 ```
 
 ### 2. Start Nomad (Dev Mode)

@@ -32,7 +32,7 @@ echo "配置用户: $ACTUAL_USER"
 echo ""
 
 # Orchestrator 二进制文件路径
-ORCHESTRATOR_BIN="/home/primihub/pcloud/infra/packages/orchestrator/bin/orchestrator"
+ORCHESTRATOR_BIN="/mnt/sdb/pcloud/infra/packages/orchestrator/bin/orchestrator"
 
 echo "Orchestrator 路径: $ORCHESTRATOR_BIN"
 echo ""
@@ -102,10 +102,10 @@ case "$CHOICE" in
             echo "创建配置文件以便后续使用..."
 
             # 创建配置文件供后续使用
-            CONFIG_FILE="/tmp/e2b-setup-capabilities.sh"
+            CONFIG_FILE="/mnt/sdb/e2b-storage/e2b-setup-capabilities.sh"
             cat > "$CONFIG_FILE" <<'CAPSCRIPT'
 #!/bin/bash
-ORCHESTRATOR_BIN="/home/primihub/pcloud/infra/packages/orchestrator/bin/orchestrator"
+ORCHESTRATOR_BIN="/mnt/sdb/pcloud/infra/packages/orchestrator/bin/orchestrator"
 if [ -f "$ORCHESTRATOR_BIN" ]; then
     sudo setcap cap_net_admin,cap_sys_admin,cap_net_raw+ep "$ORCHESTRATOR_BIN"
     echo "✓ Capabilities 已设置"
@@ -224,7 +224,7 @@ if [ "$CHOICE" = "A" ] || [ "$CHOICE" = "a" ]; then
         echo "运行方式: $ORCHESTRATOR_BIN (无需 sudo)"
     else
         echo -e "${YELLOW}⚠${NC} 需要在构建后设置 capabilities"
-        echo "运行: /tmp/e2b-setup-capabilities.sh"
+        echo "运行: /mnt/sdb/e2b-storage/e2b-setup-capabilities.sh"
     fi
 else
     echo -e "${GREEN}✓${NC} Sudo 免密码已配置"

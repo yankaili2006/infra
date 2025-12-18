@@ -20,7 +20,7 @@ if ! command -v nomad &> /dev/null; then
 fi
 
 # 配置文件
-CONFIG_FILE="/home/primihub/pcloud/infra/local-deploy/nomad-dev.hcl"
+CONFIG_FILE="/mnt/sdb/pcloud/infra/local-deploy/nomad-dev.hcl"
 
 if [ ! -f "$CONFIG_FILE" ]; then
     echo -e "${RED}✗${NC} Nomad 配置文件不存在: $CONFIG_FILE"
@@ -62,7 +62,7 @@ echo ""
 
 # 后台启动 Nomad
 nohup nomad agent -config="$CONFIG_FILE" \
-    > /tmp/e2b-logs/nomad.log 2>&1 &
+    > /mnt/sdb/e2b-storage/logs/nomad.log 2>&1 &
 
 NOMAD_PID=$!
 echo "Nomad PID: $NOMAD_PID"
@@ -83,7 +83,7 @@ done
 
 if [ $COUNT -eq $MAX_WAIT ]; then
     echo -e " ${RED}✗ 超时${NC}"
-    echo "查看日志: tail -f /tmp/e2b-logs/nomad.log"
+    echo "查看日志: tail -f /mnt/sdb/e2b-storage/logs/nomad.log"
     exit 1
 fi
 
@@ -99,11 +99,11 @@ echo ""
 echo -e "${GREEN}✓ Nomad 已启动${NC}"
 echo ""
 echo "访问地址: http://localhost:4646"
-echo "日志文件: /tmp/e2b-logs/nomad.log"
+echo "日志文件: /mnt/sdb/e2b-storage/logs/nomad.log"
 echo ""
 echo "常用命令:"
 echo "  nomad node status           # 查看节点"
 echo "  nomad job status            # 查看作业"
-echo "  tail -f /tmp/e2b-logs/nomad.log  # 查看日志"
+echo "  tail -f /mnt/sdb/e2b-storage/logs/nomad.log  # 查看日志"
 echo "  pkill nomad                 # 停止服务"
 echo ""

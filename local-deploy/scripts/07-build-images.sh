@@ -13,7 +13,7 @@ echo "=================================="
 echo ""
 
 # 项目根目录
-PROJECT_ROOT="/home/primihub/pcloud/infra"
+PROJECT_ROOT="/mnt/sdb/pcloud/infra"
 cd "$PROJECT_ROOT"
 
 echo "项目目录: $PROJECT_ROOT"
@@ -93,7 +93,7 @@ for image in "${!IMAGES[@]}"; do
     # GOPROXY already provides the proxy functionality, no need to double-proxy
     NO_PROXY_DOMAINS="localhost,127.0.0.1,goproxy.io,proxy.golang.org,sum.golang.org"
 
-    if docker build \
+    if docker build --build-arg COMMIT_SHA=312efd8 --build-arg EXPECTED_MIGRATION_TIMESTAMP= \
         -t "$image" \
         --build-arg HTTP_PROXY="" \
         --build-arg HTTPS_PROXY="" \

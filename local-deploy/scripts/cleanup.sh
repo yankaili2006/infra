@@ -48,15 +48,15 @@ echo ""
 
 # 定义要清理的目录
 declare -a CACHE_DIRS=(
-    "/tmp/e2b-sandbox-cache"
-    "/tmp/e2b-snapshot-cache"
-    "/tmp/e2b-template-cache"
-    "/tmp/e2b-chunk-cache"
-    "/tmp/nomad-local"
-    "/tmp/consul-local"
-    "/tmp/e2b-logs"
-    "/tmp/e2b-fc-vm"
-    "/tmp/e2b-orchestrator"
+    "/mnt/sdb/e2b-storage/e2b-sandbox-cache"
+    "/mnt/sdb/e2b-storage/e2b-snapshot-cache"
+    "/mnt/sdb/e2b-storage/e2b-template-cache"
+    "/mnt/sdb/e2b-storage/e2b-chunk-cache"
+    "/mnt/sdb/e2b-storage/nomad-local"
+    "/mnt/sdb/e2b-storage/consul-local"
+    "/mnt/sdb/e2b-storage/logs"
+    "/mnt/sdb/e2b-storage/e2b-fc-vm"
+    "/mnt/sdb/e2b-storage/e2b-orchestrator"
 )
 
 # 清理缓存目录
@@ -94,10 +94,10 @@ echo "清理构建缓存..."
 read -p "是否清理构建缓存? (不会删除模板存储) [y/N] " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-    if [ -d "/tmp/e2b-build-cache" ]; then
-        SIZE=$(du -sh "/tmp/e2b-build-cache" 2>/dev/null | cut -f1)
-        echo "  清理 /tmp/e2b-build-cache ($SIZE)..."
-        rm -rf /tmp/e2b-build-cache/*
+    if [ -d "/mnt/sdb/e2b-storage/e2b-build-cache" ]; then
+        SIZE=$(du -sh "/mnt/sdb/e2b-storage/e2b-build-cache" 2>/dev/null | cut -f1)
+        echo "  清理 /mnt/sdb/e2b-storage/e2b-build-cache ($SIZE)..."
+        rm -rf /mnt/sdb/e2b-storage/e2b-build-cache/*
         echo -e "${GREEN}✓${NC} 构建缓存已清理"
     else
         echo "  构建缓存目录不存在"
@@ -117,7 +117,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
         echo "执行完全重置..."
 
         # 停止 Docker 服务
-        PROJECT_ROOT="/home/primihub/pcloud/infra"
+        PROJECT_ROOT="/mnt/sdb/pcloud/infra"
         COMPOSE_DIR="$PROJECT_ROOT/packages/local-dev"
 
         if [ -f "$COMPOSE_DIR/docker-compose.yaml" ]; then
@@ -128,10 +128,10 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
         fi
 
         # 删除模板存储
-        if [ -d "/tmp/e2b-template-storage" ]; then
-            SIZE=$(du -sh "/tmp/e2b-template-storage" 2>/dev/null | cut -f1)
+        if [ -d "/mnt/sdb/e2b-storage/e2b-template-storage" ]; then
+            SIZE=$(du -sh "/mnt/sdb/e2b-storage/e2b-template-storage" 2>/dev/null | cut -f1)
             echo "  删除模板存储 ($SIZE)..."
-            rm -rf /tmp/e2b-template-storage/*
+            rm -rf /mnt/sdb/e2b-storage/e2b-template-storage/*
             echo -e "${GREEN}✓${NC} 模板存储已清空"
         fi
 
@@ -167,5 +167,5 @@ echo ""
 
 echo "提示:"
 echo "  - 重新启动服务: bash start-all.sh"
-echo "  - 查看磁盘使用: du -h --max-depth=1 /tmp/e2b-*"
+echo "  - 查看磁盘使用: du -h --max-depth=1 /mnt/sdb/e2b-storage/e2b-*"
 echo ""

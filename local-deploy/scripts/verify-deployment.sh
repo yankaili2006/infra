@@ -84,9 +84,9 @@ echo "1. 基础设施服务"
 echo "=========================================="
 echo ""
 
-check_service "PostgreSQL" "docker compose -f /home/primihub/pcloud/infra/packages/local-dev/docker-compose.yaml exec -T postgres pg_isready -U postgres"
-check_service "Redis" "docker compose -f /home/primihub/pcloud/infra/packages/local-dev/docker-compose.yaml exec -T redis redis-cli ping"
-check_service "ClickHouse" "docker compose -f /home/primihub/pcloud/infra/packages/local-dev/docker-compose.yaml exec -T clickhouse clickhouse-client --query 'SELECT 1'"
+check_service "PostgreSQL" "docker compose -f /mnt/sdb/pcloud/infra/packages/local-dev/docker-compose.yaml exec -T postgres pg_isready -U postgres"
+check_service "Redis" "docker compose -f /mnt/sdb/pcloud/infra/packages/local-dev/docker-compose.yaml exec -T redis redis-cli ping"
+check_service "ClickHouse" "docker compose -f /mnt/sdb/pcloud/infra/packages/local-dev/docker-compose.yaml exec -T clickhouse clickhouse-client --query 'SELECT 1'"
 
 echo ""
 
@@ -203,11 +203,11 @@ echo "=========================================="
 echo ""
 
 declare -a STORAGE_DIRS=(
-    "/tmp/e2b-template-storage"
-    "/tmp/e2b-orchestrator"
-    "/tmp/e2b-sandbox-cache"
-    "/tmp/nomad-local"
-    "/tmp/consul-local"
+    "/mnt/sdb/e2b-storage/e2b-template-storage"
+    "/mnt/sdb/e2b-storage/e2b-orchestrator"
+    "/mnt/sdb/e2b-storage/e2b-sandbox-cache"
+    "/mnt/sdb/e2b-storage/nomad-local"
+    "/mnt/sdb/e2b-storage/consul-local"
 )
 
 for dir in "${STORAGE_DIRS[@]}"; do
@@ -283,7 +283,7 @@ else
     echo -e "${RED}✗ 部分检查失败，请解决问题${NC}"
     echo ""
     echo "常见问题排查:"
-    echo "  1. 检查服务日志: tail -f /tmp/e2b-logs/*.log"
+    echo "  1. 检查服务日志: tail -f /mnt/sdb/e2b-storage/logs/*.log"
     echo "  2. 检查 Nomad Jobs: nomad job status"
     echo "  3. 检查 Docker: docker compose ps"
     echo "  4. 重启服务: bash stop-all.sh && bash start-all.sh"

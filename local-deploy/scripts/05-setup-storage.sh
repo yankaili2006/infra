@@ -13,7 +13,8 @@ echo "=================================="
 echo ""
 
 # 从 .env.local 读取路径配置
-ENV_FILE="/home/primihub/pcloud/infra/local-deploy/.env.local"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ENV_FILE="$(cd "$SCRIPT_DIR/.." && pwd)/.env.local"
 
 if [ ! -f "$ENV_FILE" ]; then
     echo -e "${RED}✗${NC} 环境配置文件不存在: $ENV_FILE"
@@ -38,9 +39,9 @@ declare -a STORAGE_DIRS=(
     "$SNAPSHOT_CACHE_DIR"
     "$TEMPLATE_CACHE_DIR"
     "$SHARED_CHUNK_CACHE_PATH"
-    "/tmp/nomad-local"
-    "/tmp/consul-local"
-    "/tmp/e2b-logs"
+    "/mnt/sdb/e2b-storage/nomad-local"
+    "/mnt/sdb/e2b-storage/consul-local"
+    "/mnt/sdb/e2b-storage/logs"
 )
 
 # 创建目录
@@ -112,7 +113,7 @@ mkdir -p "$SHORTCUTS_DIR"
 ln -sf "$LOCAL_TEMPLATE_STORAGE_BASE_PATH" "$SHORTCUTS_DIR/templates"
 ln -sf "$SANDBOX_CACHE_DIR" "$SHORTCUTS_DIR/sandboxes"
 ln -sf "$ORCHESTRATOR_BASE_PATH" "$SHORTCUTS_DIR/orchestrator"
-ln -sf "/tmp/e2b-logs" "$SHORTCUTS_DIR/logs"
+ln -sf "/mnt/sdb/e2b-storage/logs" "$SHORTCUTS_DIR/logs"
 
 if [ -n "$SUDO_USER" ]; then
     chown -h "$SUDO_USER:$SUDO_USER" "$SHORTCUTS_DIR"/*
@@ -161,22 +162,22 @@ cat >> "$README_FILE" <<EOF
 --------
 
 # 停止所有服务后清理缓存
-rm -rf /tmp/e2b-sandbox-cache/*
-rm -rf /tmp/e2b-snapshot-cache/*
-rm -rf /tmp/e2b-template-cache/*
-rm -rf /tmp/e2b-chunk-cache/*
+rm -rf /mnt/sdb/e2b-storage/e2b-sandbox-cache/*
+rm -rf /mnt/sdb/e2b-storage/e2b-snapshot-cache/*
+rm -rf /mnt/sdb/e2b-storage/e2b-template-cache/*
+rm -rf /mnt/sdb/e2b-storage/e2b-chunk-cache/*
 
 # 完全重置（将删除所有数据，包括模板）
-sudo bash /home/primihub/pcloud/infra/local-deploy/scripts/cleanup.sh
+sudo bash /mnt/sdb/pcloud/infra/local-deploy/scripts/cleanup.sh
 
 磁盘空间监控:
 ------------
 
 # 查看各目录大小
-du -h --max-depth=1 /tmp/e2b-*
+du -h --max-depth=1 /mnt/sdb/e2b-storage/e2b-*
 
 # 查看最大的文件
-find /tmp/e2b-* -type f -exec du -h {} + | sort -rh | head -20
+find /mnt/sdb/e2b-storage/e2b-* -type f -exec du -h {} + | sort -rh | head -20
 EOF
 
 if [ -n "$SUDO_USER" ]; then

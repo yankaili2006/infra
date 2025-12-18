@@ -22,7 +22,7 @@ var OrchestratorToApiNodeStateMapper = map[orchestratorinfo.ServiceInfoStatus]ap
 }
 
 func NewClient(tracerProvider trace.TracerProvider, meterProvider metric.MeterProvider, host string) (*grpclient.GRPCClient, error) {
-	conn, err := grpc.NewClient(host,
+	conn, err := grpc.Dial(host,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithStatsHandler(
 			otelgrpc.NewClientHandler(

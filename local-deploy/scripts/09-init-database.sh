@@ -13,7 +13,7 @@ echo "=================================="
 echo ""
 
 # 项目路径
-PROJECT_ROOT="/home/primihub/pcloud/infra"
+PROJECT_ROOT="/mnt/sdb/pcloud/infra"
 COMPOSE_DIR="$PROJECT_ROOT/packages/local-dev"
 DB_DIR="$PROJECT_ROOT/packages/db"
 
@@ -174,7 +174,7 @@ echo "连接字符串: $POSTGRES_CONNECTION_STRING"
 echo ""
 
 # 运行迁移
-if goose -dir migrations postgres "$POSTGRES_CONNECTION_STRING" up; then
+if goose -dir migrations -table _migrations postgres "$POSTGRES_CONNECTION_STRING" up; then
     echo ""
     echo -e "${GREEN}✓${NC} 数据库迁移完成"
 else
@@ -186,7 +186,7 @@ fi
 # 显示当前版本
 echo ""
 echo "当前数据库版本:"
-goose -dir migrations postgres "$POSTGRES_CONNECTION_STRING" status || true
+goose -dir migrations -table _migrations postgres "$POSTGRES_CONNECTION_STRING" status || true
 
 echo ""
 

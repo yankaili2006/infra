@@ -353,8 +353,8 @@ docker compose restart postgres
 #### Nomad/Consul 日志
 
 ```bash
-tail -f /tmp/e2b-logs/nomad.log
-tail -f /tmp/e2b-logs/consul.log
+tail -f /mnt/sdb/e2b-storage/logs/nomad.log
+tail -f /mnt/sdb/e2b-storage/logs/consul.log
 ```
 
 #### Nomad Job 日志
@@ -427,8 +427,8 @@ A: 重新运行 `06-build-binaries.sh` 和 `07-build-images.sh`，然后重新�
 ### Q: 数据保存在哪里？
 
 A:
-- 模板: `/tmp/e2b-template-storage`
-- 缓存: `/tmp/e2b-*-cache`
+- 模板: `/mnt/sdb/e2b-storage/e2b-template-storage`
+- 缓存: `/mnt/sdb/e2b-storage/e2b-*-cache`
 - 数据库: Docker volumes
 - 快捷访问: `~/e2b-storage/`
 
@@ -482,7 +482,7 @@ Nginx 配置文件: `local-deploy/nginx/nginx.conf`
 sudo mkdir -p /opt/e2b-storage
 
 # 修改 .env.local
-sed -i 's|/tmp/e2b-|/opt/e2b-storage/|g' .env.local
+sed -i 's|/mnt/sdb/e2b-storage/e2b-|/opt/e2b-storage/|g' .env.local
 
 # 重新创建目录
 bash scripts/05-setup-storage.sh

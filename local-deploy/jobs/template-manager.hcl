@@ -37,7 +37,7 @@ job "template-manager" {
       driver = "raw_exec"
 
       config {
-        command = "/home/primihub/pcloud/infra/packages/orchestrator/bin/orchestrator"
+        command = "/mnt/sdb/pcloud/infra/packages/orchestrator/bin/orchestrator"
         args    = ["--service", "template-manager"]
       }
 
@@ -55,22 +55,22 @@ job "template-manager" {
         GCP_REGION = ""
 
         # 本地路径配置
-        FIRECRACKER_VERSIONS_DIR = "/home/primihub/pcloud/infra/packages/fc-versions/builds"
-        HOST_ENVD_PATH           = "/home/primihub/pcloud/infra/packages/envd/bin/envd"
-        HOST_KERNELS_DIR         = "/home/primihub/pcloud/infra/packages/fc-kernels"
-        ORCHESTRATOR_BASE_PATH   = "/tmp/e2b-orchestrator"
-        SANDBOX_DIR              = "/tmp/e2b-fc-vm"
+        FIRECRACKER_VERSIONS_DIR = "/mnt/sdb/pcloud/infra/packages/fc-versions/builds"
+        HOST_ENVD_PATH           = "/mnt/sdb/pcloud/infra/packages/envd/bin/envd"
+        HOST_KERNELS_DIR         = "/mnt/sdb/pcloud/infra/packages/fc-kernels"
+        ORCHESTRATOR_BASE_PATH   = "/mnt/sdb/e2b-storage/e2b-orchestrator"
+        SANDBOX_DIR              = "/mnt/sdb/e2b-storage/e2b-fc-vm"
 
         # 缓存目录（与orchestrator共享）
-        LOCAL_TEMPLATE_STORAGE_BASE_PATH = "/tmp/e2b-template-storage"
-        SANDBOX_CACHE_DIR                = "/tmp/e2b-sandbox-cache"
-        SNAPSHOT_CACHE_DIR               = "/tmp/e2b-snapshot-cache"
-        TEMPLATE_CACHE_DIR               = "/tmp/e2b-template-cache"
-        SHARED_CHUNK_CACHE_PATH          = "/tmp/e2b-chunk-cache"
+        LOCAL_TEMPLATE_STORAGE_BASE_PATH = "/mnt/sdb/e2b-storage/e2b-template-storage"
+        SANDBOX_CACHE_DIR                = "/mnt/sdb/e2b-storage/e2b-sandbox-cache"
+        SNAPSHOT_CACHE_DIR               = "/mnt/sdb/e2b-storage/e2b-snapshot-cache"
+        TEMPLATE_CACHE_DIR               = "/mnt/sdb/e2b-storage/e2b-template-cache"
+        SHARED_CHUNK_CACHE_PATH          = "/mnt/sdb/e2b-storage/e2b-chunk-cache"
 
         # 模板构建专用配置
-        TEMPLATE_BUCKET_NAME       = "/tmp/e2b-template-storage"
-        BUILD_CACHE_BUCKET_NAME    = "/tmp/e2b-build-cache"
+        TEMPLATE_BUCKET_NAME       = "/mnt/sdb/e2b-storage/e2b-template-storage"
+        BUILD_CACHE_BUCKET_NAME    = "/mnt/sdb/e2b-storage/e2b-build-cache"
         DOCKERHUB_REMOTE_REPOSITORY_URL = "registry.hub.docker.com"
 
         # 基础设施连接

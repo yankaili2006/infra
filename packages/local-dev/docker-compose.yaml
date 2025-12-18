@@ -65,7 +65,7 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: postgres
+      POSTGRES_DB: e2b
       PGDATA: /var/lib/postgresql/17/docker
     ports:
       - "5432:5432"

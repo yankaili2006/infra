@@ -19,7 +19,7 @@ TEMPLATE_ID="${1:-base-template-000-0000-0000-000000000001}"
 BUILD_ID="${2:-9ac9c8b9-9b8b-476c-9238-8266af308c32}"
 KERNEL_VERSION="vmlinux-6.1.158"
 FIRECRACKER_VERSION="v1.12.1_d990331"
-TEMPLATE_STORAGE_DIR="/tmp/e2b-template-storage/${BUILD_ID}"
+TEMPLATE_STORAGE_DIR="/mnt/sdb/e2b-storage/e2b-template-storage/${BUILD_ID}"
 
 # 日志函数
 log_info() {
@@ -41,7 +41,7 @@ check_and_start_infra() {
     # 检查 PostgreSQL
     if ! docker ps | grep -q postgres; then
         log_warn "PostgreSQL 未运行，启动基础设施服务..."
-        cd /home/primihub/pcloud/infra/local-deploy
+        cd /mnt/sdb/pcloud/infra/local-deploy
         bash scripts/start-infra.sh
         sleep 5
     else
@@ -109,7 +109,7 @@ EOF
 prepare_kernel() {
     log_info "准备内核文件..."
 
-    KERNEL_DIR="/home/primihub/pcloud/infra/packages/fc-kernels"
+    KERNEL_DIR="/mnt/sdb/pcloud/infra/packages/fc-kernels"
 
     if [ ! -f "$KERNEL_DIR/$KERNEL_VERSION" ]; then
         log_warn "创建内核符号链接..."

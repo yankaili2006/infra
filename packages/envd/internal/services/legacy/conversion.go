@@ -144,7 +144,7 @@ func maybeConvertResponse(logger *zerolog.Logger, response connect.AnyResponse) 
 	pm, ok := value.(protoreflect.ProtoMessage)
 	if !ok {
 		logger.Warn().
-			Type("response", response).
+			Interface("response", response).
 			Msg("cannot convert, expected protoreflect.ProtoMessage")
 
 		return response
@@ -154,7 +154,7 @@ func maybeConvertResponse(logger *zerolog.Logger, response connect.AnyResponse) 
 	conversion, ok := protoConverters[valueType]
 	if !ok {
 		logger.Error().
-			Type("response", response).
+			Interface("response", response).
 			Msg("do not know how to convert")
 
 		return response
@@ -163,7 +163,7 @@ func maybeConvertResponse(logger *zerolog.Logger, response connect.AnyResponse) 
 	if r, err := conversion(pm); err != nil {
 		logger.Warn().
 			Err(err).
-			Type("response", response).
+			Interface("response", response).
 			Msg("conversion failed")
 	} else {
 		copyHeaders(response.Header(), r.Header())

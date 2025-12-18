@@ -129,7 +129,7 @@ echo "  docker compose ps             # Docker 服务"
 echo ""
 
 echo "查看日志:"
-echo "  tail -f /tmp/e2b-logs/*.log   # Nomad/Consul 日志"
+echo "  tail -f /mnt/sdb/e2b-storage/logs/*.log   # Nomad/Consul 日志"
 echo "  nomad alloc logs -f <id>      # Job 日志"
 echo "  docker compose logs -f        # Docker 日志"
 echo ""

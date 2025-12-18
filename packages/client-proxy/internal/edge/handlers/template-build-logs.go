@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/grafana/loki/pkg/logproto"
 	"go.uber.org/zap"
 
 	api "github.com/e2b-dev/infra/packages/shared/pkg/http/edge"
@@ -18,8 +17,6 @@ import (
 const (
 	templateBuildLogsLimit        = 100
 	templateBuildLogsDefaultRange = 24 * time.Hour // 1 day
-
-	defaultDirection = logproto.FORWARD
 )
 
 func apiLevelToLogLevel(level *api.LogLevel) *logs.LogLevel {
@@ -42,11 +39,6 @@ func (a *APIStore) V1TemplateBuildLogs(c *gin.Context, buildID string, params ap
 		offset = *params.Offset
 	}
 
-	direction := defaultDirection
-	if params.Direction != nil && *params.Direction == api.Backward {
-		direction = logproto.BACKWARD
-	}
-
 	start, end := time.Now().Add(-templateBuildLogsDefaultRange), time.Now()
 	if params.Start != nil {
 		start = time.UnixMilli(*params.Start)
@@ -60,7 +52,7 @@ func (a *APIStore) V1TemplateBuildLogs(c *gin.Context, buildID string, params ap
 		limit = int(*params.Limit)
 	}
 
-	logsRaw, err := a.queryLogsProvider.QueryBuildLogs(ctx, params.TemplateID, buildID, start, end, limit, offset, apiLevelToLogLevel(params.Level), direction)
+	logsRaw, err := a.queryLogsProvider.QueryBuildLogs(ctx, params.TemplateID, buildID, start, end, limit, offset, apiLevelToLogLevel(params.Level), nil)
 	if err != nil {
 		a.sendAPIStoreError(c, http.StatusInternalServerError, "Error when fetching template build logs")
 		telemetry.ReportCriticalError(ctx, "error when fetching template build logs", err)

@@ -70,7 +70,11 @@ func Middleware(meterProvider metric.MeterProvider, service string, options ...O
 
 func attributesFromGinContext(ginCtx *gin.Context, filterPrefix string) []attribute.KeyValue {
 	attrs := make([]attribute.KeyValue, 0, len(ginCtx.Keys))
-	for keyRaw, v := range ginCtx.Keys {
+	for kRaw, v := range ginCtx.Keys {
+		keyRaw, ok := kRaw.(string)
+		if !ok {
+			continue
+		}
 		if !strings.HasPrefix(keyRaw, filterPrefix) {
 			continue
 		}

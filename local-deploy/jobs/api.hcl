@@ -67,7 +67,7 @@ job "api" {
       driver = "raw_exec"
 
       config {
-        command = "/home/primihub/pcloud/infra/packages/api/bin/api"
+        command = "/mnt/sdb/pcloud/infra/packages/api/bin/api"
         args     = ["--port", "3000"]
       }
 
@@ -117,9 +117,9 @@ job "api" {
         # 存储配置（使用本地文件系统）
         STORAGE_PROVIDER            = "Local"
         ARTIFACTS_REGISTRY_PROVIDER = "Local"
-        LOCAL_TEMPLATE_STORAGE_BASE_PATH = "/tmp/e2b-template-storage"
-        BUILD_CACHE_BUCKET_NAME    = "/tmp/e2b-build-cache"
-        TEMPLATE_CACHE_DIR         = "/tmp/e2b-template-cache"
+        LOCAL_TEMPLATE_STORAGE_BASE_PATH = "/mnt/sdb/e2b-storage/e2b-template-storage"
+        BUILD_CACHE_BUCKET_NAME    = "/mnt/sdb/e2b-storage/e2b-build-cache"
+        TEMPLATE_CACHE_DIR         = "/mnt/sdb/e2b-storage/e2b-template-cache"
 
         # 默认版本
         DEFAULT_KERNEL_VERSION      = "vmlinux-6.1.158"

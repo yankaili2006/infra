@@ -14,7 +14,7 @@ echo "=========================================="
 echo ""
 
 # Job 文件目录
-JOBS_DIR="/home/primihub/pcloud/infra/local-deploy/jobs"
+JOBS_DIR="/mnt/sdb/pcloud/infra/local-deploy/jobs"
 
 if [ ! -d "$JOBS_DIR" ]; then
     echo -e "${RED}✗${NC} Jobs 目录不存在: $JOBS_DIR"

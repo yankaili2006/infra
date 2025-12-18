@@ -60,7 +60,7 @@ func (n *mockSandboxClientWithSleep) Create(_ context.Context, _ *orchestrator.S
 // newMockGRPCClient creates a new mock gRPC client for testing
 func newMockGRPCClient() *grpclient.GRPCClient {
 	// Create a dummy connection that will never be used
-	conn, _ := grpc.NewClient("localhost:0", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, _ := grpc.Dial("localhost:0", grpc.WithTransportCredentials(insecure.NewCredentials()))
 
 	return &grpclient.GRPCClient{
 		Info:       &mockInfoClient{},

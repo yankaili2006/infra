@@ -13,7 +13,7 @@ echo "=================================="
 echo ""
 
 # 项目根目录
-PROJECT_ROOT="/home/primihub/pcloud/infra"
+PROJECT_ROOT="/mnt/sdb/pcloud/infra"
 cd "$PROJECT_ROOT"
 
 echo "项目目录: $PROJECT_ROOT"
@@ -206,7 +206,7 @@ fi
 echo ""
 
 # 4. 设置 Capabilities（如果之前选择了此选项）
-if [ -f "/tmp/e2b-setup-capabilities.sh" ]; then
+if [ -f "/mnt/sdb/e2b-storage/e2b-setup-capabilities.sh" ]; then
     echo "4. 检测到 capabilities 配置脚本"
     echo ""
 
@@ -224,7 +224,7 @@ if [ -f "/tmp/e2b-setup-capabilities.sh" ]; then
             echo "需要 sudo 权限设置 capabilities:"
             echo "sudo setcap cap_net_admin,cap_sys_admin,cap_net_raw+ep $ORCHESTRATOR_BIN"
             echo ""
-            echo "或运行: sudo /tmp/e2b-setup-capabilities.sh"
+            echo "或运行: sudo /mnt/sdb/e2b-storage/e2b-setup-capabilities.sh"
         fi
     fi
     echo ""

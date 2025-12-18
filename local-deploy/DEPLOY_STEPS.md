@@ -112,7 +112,7 @@ make local-deploy-verify   # 验证部署
 如遇问题，查看日志：
 ```bash
 # Nomad/Consul 日志
-tail -f /tmp/e2b-logs/*.log
+tail -f /mnt/sdb/e2b-storage/logs/*.log
 
 # Nomad Job 日志
 nomad alloc logs -f <alloc-id>
