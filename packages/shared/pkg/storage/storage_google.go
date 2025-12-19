@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/storage"
-	"github.com/googleapis/gax-go/v2"
+
 	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
 	"google.golang.org/api/iterator"
@@ -237,4 +237,67 @@ func parseServiceAccountBase64(serviceAccount string) (*gcpServiceToken, error) 
 	}
 
 	return &sa, nil
+}
+
+func (g *GCPBucketStorageProvider) OpenObject(ctx context.Context, path string, objectType ObjectType) (ObjectProvider, error) {
+	handle := g.bucket.Object(path)
+
+	return &GCPBucketStorageObjectProvider{
+		storage: g,
+		path:    path,
+		handle:  handle,
+		limiter: g.limiter,
+	}, nil
+}
+
+func (g *GCPBucketStorageObjectProvider) ReadAt(ctx context.Context, p []byte, off int64) (n int, err error) {
+	reader, err := g.handle.NewRangeReader(ctx, off, int64(len(p)))
+	if err != nil {
+		return 0, err
+	}
+	defer reader.Close()
+
+	return io.ReadFull(reader, p)
+}
+
+func (g *GCPBucketStorageObjectProvider) Size(ctx context.Context) (int64, error) {
+	attrs, err := g.handle.Attrs(ctx)
+	if err != nil {
+		return 0, err
+	}
+
+	return attrs.Size, nil
+}
+
+func (g *GCPBucketStorageObjectProvider) Write(ctx context.Context, p []byte) (n int, err error) {
+	w := g.handle.NewWriter(ctx)
+	n, err = w.Write(p)
+	if err != nil {
+		_ = w.Close()
+		return n, err
+	}
+
+	return n, w.Close()
+}
+
+func (g *GCPBucketStorageObjectProvider) WriteTo(ctx context.Context, w io.Writer) (n int64, err error) {
+	r, err := g.handle.NewReader(ctx)
+	if err != nil {
+		return 0, err
+	}
+	defer r.Close()
+
+	return io.Copy(w, r)
+}
+
+func (g *GCPBucketStorageObjectProvider) Exists(ctx context.Context) (bool, error) {
+	_, err := g.handle.Attrs(ctx)
+	if errors.Is(err, storage.ErrObjectNotExist) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
 }

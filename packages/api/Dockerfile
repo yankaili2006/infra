@@ -3,7 +3,7 @@ ARG ALPINE_VERSION=3.22
 
 FROM golang:${GOLANG_VERSION}-alpine${ALPINE_VERSION} AS builder
 
-RUN apk add --no-cache make
+RUN apk add --no-cache make git
 
 # Proxy configuration for go mod download
 ARG HTTP_PROXY
@@ -52,7 +52,7 @@ WORKDIR /build/api
 
 ARG COMMIT_SHA
 ARG EXPECTED_MIGRATION_TIMESTAMP
-RUN --mount=type=cache,target=/root/.cache/go-build make build COMMIT_SHA=${COMMIT_SHA} EXPECTED_MIGRATION_TIMESTAMP=${EXPECTED_MIGRATION_TIMESTAMP}
+RUN CGO_ENABLED=0 go build -o bin/api -ldflags "-X=main.commitSHA=local-build -X=main.expectedMigrationTimestamp=" .
 
 RUN chmod +x /build/api/bin/api
 

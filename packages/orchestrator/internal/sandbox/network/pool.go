@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/caarlos0/env/v11"
 	"go.opentelemetry.io/otel"
@@ -120,6 +121,7 @@ func (p *Pool) Populate(ctx context.Context) {
 			if err != nil {
 				logger.L().Error(ctx, "[network slot pool]: failed to create network", zap.Error(err))
 
+				time.Sleep(time.Second)
 				continue
 			}
 

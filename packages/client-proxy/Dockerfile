@@ -3,7 +3,7 @@ ARG ALPINE_VERSION=3.22
 
 FROM golang:${GOLANG_VERSION}-alpine${ALPINE_VERSION} AS builder
 
-RUN apk add --no-cache make
+RUN apk add --no-cache make git
 
 # Proxy configuration for go mod download
 ARG HTTP_PROXY
@@ -44,7 +44,7 @@ COPY ./client-proxy/Makefile ./client-proxy/Makefile
 WORKDIR /build/client-proxy
 
 ARG COMMIT_SHA
-RUN --mount=type=cache,target=/root/.cache/go-build make build COMMIT_SHA=${COMMIT_SHA}
+RUN COMMIT_SHA=${COMMIT_SHA:-local-build} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/client-proxy -ldflags "-X=main.commitSHA=${COMMIT_SHA}" .
 RUN chmod +x /build/client-proxy/bin/client-proxy
 
 FROM alpine:${ALPINE_VERSION}

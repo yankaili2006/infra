@@ -47,7 +47,11 @@ check_port() {
 
     echo -n "检查端口 $port ($name)... "
 
-    if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null 2>&1; then
+    if ss -lnt | grep -q ":$port\b"; then
+        echo -e "${GREEN}✓ 监听中${NC}"
+        CHECKS_PASSED=$((CHECKS_PASSED + 1))
+        return 0
+    elif lsof -Pi :$port -sTCP:LISTEN -t >/dev/null 2>&1; then
         echo -e "${GREEN}✓ 监听中${NC}"
         CHECKS_PASSED=$((CHECKS_PASSED + 1))
         return 0

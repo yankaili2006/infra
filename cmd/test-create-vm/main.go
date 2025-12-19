@@ -51,8 +51,8 @@ func main() {
 
 	req := &pb.SandboxCreateRequest{
 		Sandbox: &pb.SandboxConfig{
-			TemplateId:         "base",
-			BuildId:            "fcb118f7-4d32-45d0-a935-13f3e630ecbb",
+			TemplateId:         "base-template-000-0000-0000-000000000001",
+			BuildId:            "9ac9c8b9-9b8b-476c-9238-8266af308c32",
 			KernelVersion:      "vmlinux-6.1.158",
 			FirecrackerVersion: "v1.12.1_d990331",
 			SandboxId:          sandboxID,

@@ -11,6 +11,7 @@ use (
 	./packages/local-dev
 	./packages/orchestrator
 	./packages/shared
+	./cmd/test-create-vm
 
 	./tests/integration
 )

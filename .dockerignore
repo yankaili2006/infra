@@ -16,3 +16,5 @@
 
 /.dockerfile
 /Dockerfile
+!/packages/clickhouse
+!/packages/db

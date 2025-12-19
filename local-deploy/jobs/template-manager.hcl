@@ -81,9 +81,11 @@ job "template-manager" {
 
         # 端口配置
         GRPC_PORT = "5009"
+        PROXY_PORT = "5012"
+        HYPERLOOP_PROXY_PORT = "5011"
 
         # Template Manager specific config
-        HYPERLOOP_SERVER_PORT = "5011"  # 使用不同的端口避免冲突
+        HYPERLOOP_SERVER_PORT = "5011"  # 保留此项以防万一
 
         # 服务标识
         ORCHESTRATOR_SERVICES = "template-manager"

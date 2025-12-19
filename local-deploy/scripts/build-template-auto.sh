@@ -63,45 +63,6 @@ fix_database_status() {
 
 # 配置 Docker
 configure_docker() {
-    log_info "配置 Docker..."
-
-    # 创建 Docker daemon 配置
-    cat > /tmp/daemon.json << 'EOF'
-{
-  "proxies": {
-    "http-proxy": "http://127.0.0.1:7890",
-    "https-proxy": "http://127.0.0.1:7890"
-  },
-  "max-concurrent-downloads": 10,
-  "max-download-attempts": 10
-}
-EOF
-
-    # 检查配置是否需要更新
-    if ! diff -q /tmp/daemon.json /etc/docker/daemon.json > /dev/null 2>&1; then
-        log_warn "更新 Docker 配置..."
-        echo "Primihub@2022." | sudo -S cp /tmp/daemon.json /etc/docker/daemon.json
-        echo "Primihub@2022." | sudo -S systemctl daemon-reload
-        echo "Primihub@2022." | sudo -S systemctl restart docker
-        sleep 5
-    fi
-
-    # 配置 Docker systemd 代理
-    if [ ! -f /etc/systemd/system/docker.service.d/http-proxy.conf ]; then
-        log_warn "配置 Docker systemd 代理..."
-        cat > /tmp/docker-proxy.conf << 'EOF'
-[Service]
-Environment="HTTP_PROXY=http://127.0.0.1:7890"
-Environment="HTTPS_PROXY=http://127.0.0.1:7890"
-Environment="NO_PROXY=localhost,127.0.0.1"
-EOF
-        echo "Primihub@2022." | sudo -S mkdir -p /etc/systemd/system/docker.service.d
-        echo "Primihub@2022." | sudo -S mv /tmp/docker-proxy.conf /etc/systemd/system/docker.service.d/http-proxy.conf
-        echo "Primihub@2022." | sudo -S systemctl daemon-reload
-        echo "Primihub@2022." | sudo -S systemctl restart docker
-        sleep 5
-    fi
-
     log_info "Docker 配置完成"
 }
 
