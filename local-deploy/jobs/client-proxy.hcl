@@ -2,7 +2,7 @@ job "client-proxy" {
   datacenters = ["dc1"]
   type        = "service"
   priority    = 90
-  node_pool   = "default"
+  node_pool   = "local-dev"
 
   # 本地开发只需要1个实例
   group "client-proxy" {
@@ -17,7 +17,7 @@ job "client-proxy" {
 
     network {
       port "http" {
-        static = 3002
+        static = 3001
       }
     }
 
@@ -38,9 +38,9 @@ job "client-proxy" {
       driver = "raw_exec"
 
       config {
-        command = "/mnt/sdb/pcloud/infra/packages/client-proxy/bin/client-proxy"
+        command = "/home/primihub/pcloud/infra/packages/client-proxy/bin/client-proxy"
         args = [
-          "--port", "3002",
+          "--port", "3001",
         ]
       }
 
@@ -51,7 +51,7 @@ job "client-proxy" {
         ENVIRONMENT = "local"
 
         # 服务端口
-        PORT = "3002"
+        PORT = "3001"
 
         # Redis配置
         REDIS_URL         = "127.0.0.1:6379"

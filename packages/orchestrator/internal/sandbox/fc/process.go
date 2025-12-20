@@ -109,10 +109,10 @@ func NewProcess(
 		return nil, fmt.Errorf("error stating kernel file: %w", err)
 	}
 
+	// Temporarily remove unshare -m to test namespace isolation issue
+	// Original code used unshare -m which creates private mount namespace
+	// This caused Firecracker to not see the tmpfs mounts and symlinks
 	cmd := exec.CommandContext(execCtx,
-		"unshare",
-		"-m",
-		"--",
 		"bash",
 		"-c",
 		startScript.Value,
@@ -242,10 +242,10 @@ func (p *Process) Create(
 	// IPv4 configuration - format: [local_ip]::[gateway_ip]:[netmask]:hostname:iface:dhcp_option:[dns]
 	ipv4 := fmt.Sprintf("%s::%s:%s:instance:%s:off:%s", p.slot.NamespaceIP(), p.slot.TapIPString(), p.slot.TapMaskString(), p.slot.VpeerName(), p.slot.TapName())
 	args := KernelArgs{
-		// Disable kernel logs for production to speed the FC operations
-		// https://github.com/firecracker-microvm/firecracker/blob/main/docs/prod-host-setup.md#logging-and-performance
-		"quiet":    "",
-		"loglevel": "1",
+		// Enable detailed kernel logs for debugging cold start
+		"console":      "ttyS0",
+		"earlyprintk": "ttyS0",
+		"loglevel":    "8",
 
 		// Define kernel init path
 		"init": options.InitScriptPath,
@@ -275,9 +275,7 @@ func (p *Process) Create(
 
 	if options.KernelLogs || options.SystemdToKernelLogs {
 		// Forward kernel logs to the ttyS0, which will be picked up by the stdout of FC process
-		delete(args, "quiet")
-		args["console"] = "ttyS0"
-		args["loglevel"] = "5" // KERN_NOTICE
+		args["loglevel"] = "8" // KERN_DEBUG - maximum verbosity for debugging
 	}
 
 	kernelArgs := args.String()

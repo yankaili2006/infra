@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"cloud.google.com/go/storage"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
 	"google.golang.org/api/iterator"
@@ -148,6 +147,18 @@ func (g *GCPBucketStorageProvider) OpenSeekableObject(_ context.Context, path st
 }
 
 // OpenObject opens a storage object for sequential read/write access.
+func (g *GCPBucketStorageProvider) OpenObject(_ context.Context, path string, _ ObjectType) (ObjectProvider, error) {
+	handle := g.bucket.Object(path)
+
+	return &GCPBucketStorageObjectProvider{
+		storage: g,
+		path:    path,
+		handle:  handle,
+
+		limiter: g.limiter,
+	}, nil
+}
+
 func (g *GCPBucketStorageObjectProvider) WriteFromFileSystem(ctx context.Context, path string) error {
 	timer := googleWriteTimerFactory.Begin()
 
@@ -239,65 +250,86 @@ func parseServiceAccountBase64(serviceAccount string) (*gcpServiceToken, error) 
 	return &sa, nil
 }
 
-func (g *GCPBucketStorageProvider) OpenObject(ctx context.Context, path string, objectType ObjectType) (ObjectProvider, error) {
-	handle := g.bucket.Object(path)
+// Write implements ObjectProvider interface for writing data
+func (g *GCPBucketStorageObjectProvider) Write(ctx context.Context, data []byte) (int, error) {
+	timer := googleWriteTimerFactory.Begin()
+	defer timer.End(ctx, int64(len(data)), attribute.String("method", "write"))
 
-	return &GCPBucketStorageObjectProvider{
-		storage: g,
-		path:    path,
-		handle:  handle,
-		limiter: g.limiter,
-	}, nil
-}
+	w := g.handle.NewWriter(ctx)
+	defer w.Close()
 
-func (g *GCPBucketStorageObjectProvider) ReadAt(ctx context.Context, p []byte, off int64) (n int, err error) {
-	reader, err := g.handle.NewRangeReader(ctx, off, int64(len(p)))
+	n, err := w.Write(data)
 	if err != nil {
-		return 0, err
+		return n, fmt.Errorf("failed to write to GCS object: %w", err)
 	}
-	defer reader.Close()
 
-	return io.ReadFull(reader, p)
+	if err := w.Close(); err != nil {
+		return n, fmt.Errorf("failed to close GCS writer: %w", err)
+	}
+
+	return n, nil
 }
 
+// WriteTo implements ObjectProvider interface for reading data
+func (g *GCPBucketStorageObjectProvider) WriteTo(ctx context.Context, dst io.Writer) (int64, error) {
+	timer := googleReadTimerFactory.Begin()
+
+	r, err := g.handle.NewReader(ctx)
+	if err != nil {
+		if errors.Is(err, storage.ErrObjectNotExist) {
+			return 0, ErrObjectNotExist
+		}
+		return 0, fmt.Errorf("failed to create GCS reader: %w", err)
+	}
+	defer r.Close()
+
+	n, err := io.Copy(dst, r)
+	timer.End(ctx, n, attribute.String("method", "write-to"))
+
+	return n, err
+}
+
+// ReadAt implements SeekableObjectProvider interface for random read access
+func (g *GCPBucketStorageObjectProvider) ReadAt(ctx context.Context, buff []byte, off int64) (int, error) {
+	timer := googleReadTimerFactory.Begin()
+	defer timer.End(ctx, int64(len(buff)), attribute.String("method", "read-at"))
+
+	r, err := g.handle.NewRangeReader(ctx, off, int64(len(buff)))
+	if err != nil {
+		if errors.Is(err, storage.ErrObjectNotExist) {
+			return 0, ErrObjectNotExist
+		}
+		return 0, fmt.Errorf("failed to create GCS range reader: %w", err)
+	}
+	defer r.Close()
+
+	n, err := io.ReadFull(r, buff)
+	if errors.Is(err, io.ErrUnexpectedEOF) {
+		err = io.EOF
+	}
+
+	return n, err
+}
+
+// Size implements SeekableObjectProvider interface
 func (g *GCPBucketStorageObjectProvider) Size(ctx context.Context) (int64, error) {
 	attrs, err := g.handle.Attrs(ctx)
 	if err != nil {
-		return 0, err
+		if errors.Is(err, storage.ErrObjectNotExist) {
+			return 0, ErrObjectNotExist
+		}
+		return 0, fmt.Errorf("failed to get GCS object attributes: %w", err)
 	}
 
 	return attrs.Size, nil
 }
 
-func (g *GCPBucketStorageObjectProvider) Write(ctx context.Context, p []byte) (n int, err error) {
-	w := g.handle.NewWriter(ctx)
-	n, err = w.Write(p)
-	if err != nil {
-		_ = w.Close()
-		return n, err
-	}
-
-	return n, w.Close()
-}
-
-func (g *GCPBucketStorageObjectProvider) WriteTo(ctx context.Context, w io.Writer) (n int64, err error) {
-	r, err := g.handle.NewReader(ctx)
-	if err != nil {
-		return 0, err
-	}
-	defer r.Close()
-
-	return io.Copy(w, r)
-}
-
+// Exists implements ObjectProvider interface
 func (g *GCPBucketStorageObjectProvider) Exists(ctx context.Context) (bool, error) {
-	_, err := g.handle.Attrs(ctx)
-	if errors.Is(err, storage.ErrObjectNotExist) {
+	_, err := g.Size(ctx)
+	if errors.Is(err, ErrObjectNotExist) {
 		return false, nil
 	}
-	if err != nil {
-		return false, err
-	}
 
-	return true, nil
+	return err == nil, err
 }

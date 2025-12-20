@@ -234,14 +234,20 @@ func (f *Factory) CreateSandbox(
 		}
 	}()
 
+	// Memfile is optional for cold start - if not available, will trigger cold boot instead of snapshot resume
 	memfile, err := template.Memfile(ctx)
+	var memfileSize int64
 	if err != nil {
-		return nil, fmt.Errorf("failed to get memfile: %w", err)
-	}
-
-	memfileSize, err := memfile.Size()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get memfile size: %w", err)
+		logger.L().Warn(ctx, "memfile not available, will use cold start if snapfile also missing", zap.Error(err))
+		memfile = nil
+		memfileSize = 0
+	} else {
+		memfileSize, err = memfile.Size()
+		if err != nil {
+			logger.L().Warn(ctx, "failed to get memfile size, will use cold start if snapfile missing", zap.Error(err))
+			memfile = nil
+			memfileSize = 0
+		}
 	}
 
 	// / ==== END of resources initialization ====
@@ -287,10 +293,16 @@ func (f *Factory) CreateSandbox(
 	}
 	telemetry.ReportEvent(ctx, "created fc process")
 
+	// Determine block size: use memfile's if available, otherwise use default 4KB
+	blockSize := int64(4096) // Default block size
+	if memfile != nil {
+		blockSize = memfile.BlockSize()
+	}
+
 	resources := &Resources{
 		Slot:   ips.slot,
 		rootfs: rootfsProvider,
-		memory: uffd.NewNoopMemory(memfileSize, memfile.BlockSize()),
+		memory: uffd.NewNoopMemory(memfileSize, blockSize),
 	}
 
 	metadata := &Metadata{
@@ -398,25 +410,20 @@ func (f *Factory) ResumeSandbox(
 
 	telemetry.ReportEvent(ctx, "got template rootfs")
 
-	rootfsOverlay, err := rootfs.NewNBDProvider(
-		readonlyRootfs,
-		sandboxFiles.SandboxCacheRootfsPath(f.config),
-		f.devicePool,
-	)
+	// TEMPORARY TEST: Use SimpleReadonlyProvider to bypass NBD and test direct file access
+	// This helps isolate whether the issue is in NBD layer or Firecracker/kernel layer
+	// Hardcode the path for testing - replace with actual template storage path
+	testRootfsPath := "/mnt/sdb/e2b-storage/e2b-template-storage/fcb118f7-4d32-45d0-a935-13f3e630ecbb/rootfs.ext4"
+	rootfsOverlay, err := rootfs.NewSimpleReadonlyProvider(testRootfsPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create rootfs overlay: %w", err)
+		return nil, fmt.Errorf("failed to create rootfs provider: %w", err)
 	}
 
 	cleanup.Add(ctx, rootfsOverlay.Close)
 
-	telemetry.ReportEvent(ctx, "created rootfs overlay")
+	telemetry.ReportEvent(ctx, "created simple readonly rootfs provider (bypassing NBD)")
 
-	go func() {
-		runErr := rootfsOverlay.Start(execCtx)
-		if runErr != nil {
-			logger.L().Error(ctx, "rootfs overlay error", zap.Error(runErr))
-		}
-	}()
+	// No need to start in background since SimpleReadonlyProvider.Start() is a no-op
 
 	memfile, err := t.Memfile(ctx)
 	if err != nil {
@@ -515,7 +522,7 @@ func (f *Factory) ResumeSandbox(
 			config.RamMB,
 			config.HugePages,
 			fc.ProcessOptions{
-				IoEngine: nil,
+				IoEngine: func() *string { s := "Sync"; return &s }(), // Use Sync engine for testing direct file access
 				InitScriptPath: "",
 				KernelLogs: false,
 				SystemdToKernelLogs: false,

@@ -2,7 +2,7 @@ job "api" {
   datacenters = ["dc1"]
   type        = "service"
   priority    = 90
-  node_pool   = "default"
+  node_pool   = "local-dev"  # 匹配节点的 pool
 
   # 本地开发只需要1个实例
   group "api-service" {
@@ -67,7 +67,7 @@ job "api" {
       driver = "raw_exec"
 
       config {
-        command = "/mnt/sdb/pcloud/infra/packages/api/bin/api"
+        command = "/home/primihub/pcloud/infra/packages/api/bin/api"
         args     = ["--port", "3000"]
       }
 
@@ -117,9 +117,9 @@ job "api" {
         # 存储配置（使用本地文件系统）
         STORAGE_PROVIDER            = "Local"
         ARTIFACTS_REGISTRY_PROVIDER = "Local"
-        LOCAL_TEMPLATE_STORAGE_BASE_PATH = "/mnt/sdb/e2b-storage/e2b-template-storage"
-        BUILD_CACHE_BUCKET_NAME    = "/mnt/sdb/e2b-storage/e2b-build-cache"
-        TEMPLATE_CACHE_DIR         = "/mnt/sdb/e2b-storage/e2b-template-cache"
+        LOCAL_TEMPLATE_STORAGE_BASE_PATH = "/home/primihub/e2b-storage/e2b-template-storage"
+        BUILD_CACHE_BUCKET_NAME    = "/home/primihub/e2b-storage/e2b-build-cache"
+        TEMPLATE_CACHE_DIR         = "/home/primihub/e2b-storage/e2b-template-cache"
 
         # 默认版本
         DEFAULT_KERNEL_VERSION      = "vmlinux-6.1.158"
