@@ -412,8 +412,8 @@ func (f *Factory) ResumeSandbox(
 
 	// TEMPORARY TEST: Use SimpleReadonlyProvider to bypass NBD and test direct file access
 	// This helps isolate whether the issue is in NBD layer or Firecracker/kernel layer
-	// Hardcode the path for testing - replace with actual template storage path
-	testRootfsPath := "/mnt/sdb/e2b-storage/e2b-template-storage/fcb118f7-4d32-45d0-a935-13f3e630ecbb/rootfs.ext4"
+	// Use correct storage path - FIXED: was /mnt/sdb, should be /home/primihub
+	testRootfsPath := "/home/primihub/e2b-storage/e2b-template-storage/fcb118f7-4d32-45d0-a935-13f3e630ecbb/rootfs.ext4"
 	rootfsOverlay, err := rootfs.NewSimpleReadonlyProvider(testRootfsPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create rootfs provider: %w", err)
@@ -425,27 +425,43 @@ func (f *Factory) ResumeSandbox(
 
 	// No need to start in background since SimpleReadonlyProvider.Start() is a no-op
 
+	// Memfile is optional for cold start - if not available, will trigger cold boot instead of snapshot resume
 	memfile, err := t.Memfile(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get memfile: %w", err)
+		logger.L().Warn(ctx, "memfile not available, will use cold start if snapfile also missing", zap.Error(err))
+		memfile = nil
+	} else {
+		_, err = memfile.Size()
+		if err != nil {
+			logger.L().Warn(ctx, "failed to get memfile size, will use cold start if snapfile missing", zap.Error(err))
+			memfile = nil
+		} else {
+			telemetry.ReportEvent(ctx, "got template memfile")
+		}
 	}
-
-	telemetry.ReportEvent(ctx, "got template memfile")
 
 	fcUffdPath := sandboxFiles.SandboxUffdSocketPath()
 
-	fcUffd, err := serveMemory(
-		execCtx,
-		cleanup,
-		memfile,
-		fcUffdPath,
-		runtime.SandboxID,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to serve memory: %w", err)
+	// Only serve memory if memfile is available (for snapshot resume)
+	// For cold start, fcUffd will not be used
+	var fcUffd uffd.MemoryBackend
+	if memfile != nil {
+		fcUffd, err = serveMemory(
+			execCtx,
+			cleanup,
+			memfile,
+			fcUffdPath,
+			runtime.SandboxID,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to serve memory: %w", err)
+		}
+		telemetry.ReportEvent(ctx, "started serving memory")
+	} else {
+		// For cold start without memfile, use NoopMemory
+		fcUffd = uffd.NewNoopMemory(0, 4096)
+		telemetry.ReportEvent(ctx, "using noop memory for cold start")
 	}
-
-	telemetry.ReportEvent(ctx, "started serving memory")
 
 	// ==== END of resources initialization ====
 	uffdStartCtx, cancelUffdStartCtx := context.WithCancelCause(ctx)
@@ -523,7 +539,7 @@ func (f *Factory) ResumeSandbox(
 			config.HugePages,
 			fc.ProcessOptions{
 				IoEngine: func() *string { s := "Sync"; return &s }(), // Use Sync engine for testing direct file access
-				InitScriptPath: "",
+				InitScriptPath: "/sbin/init",
 				KernelLogs: false,
 				SystemdToKernelLogs: false,
 				KvmClock: false,

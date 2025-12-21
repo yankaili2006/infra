@@ -43,7 +43,8 @@ job "orchestrator" {
       driver = "raw_exec"  # 需要直接访问系统资源
 
       config {
-        command = "/home/primihub/pcloud/infra/packages/orchestrator/bin/orchestrator"
+        command = "sudo"
+        args    = ["-E", "/home/primihub/pcloud/infra/packages/orchestrator/bin/orchestrator"]
       }
 
       env {
@@ -97,10 +98,9 @@ job "orchestrator" {
         # GIN模式
         GIN_MODE = "release"
 
-        # 禁用 Huge Pages（解决 snapshot block size 不匹配问题）
+        # 禁用 Huge Pages（使用 4KB 标准页面进行冷启动测试）
         ORCHESTRATOR_HUGE_PAGES = "false"
         HUGE_PAGES = "false"
-        ORCHESTRATOR_ENABLE_HUGE_PAGES = "false"  # 所有可能的变量名
       }
 
       resources {
