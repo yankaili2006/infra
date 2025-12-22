@@ -1,0 +1,224 @@
+#!/bin/bash
+# E2B CLI - 便捷的虚拟机命令行工具
+# 版本: 2.0
+
+set -e
+
+# 颜色输出
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+NC='\033[0m'
+
+# 默认配置
+API_KEY="${E2B_API_KEY:-e2b_53ae1fed82754c17ad8077fbc8bcdd90}"
+API_URL="${E2B_API_URL:-http://localhost:3000}"
+TEMPLATE_ID="${E2B_TEMPLATE_ID:-base-template-000-0000-0000-000000000001}"
+TIMEOUT="${E2B_TIMEOUT:-300}"
+
+# 缓存文件
+LAST_VM_FILE="/tmp/.e2b_last_vm"
+
+# 日志函数
+log() { echo -e "${BLUE}[INFO]${NC} $*"; }
+success() { echo -e "${GREEN}[✓]${NC} $*"; }
+warn() { echo -e "${YELLOW}[!]${NC} $*"; }
+error() { echo -e "${RED}[✗]${NC} $*"; exit 1; }
+
+# API调用
+api_call() {
+    local method=$1
+    local endpoint=$2
+    local data=$3
+
+    if [ -n "$data" ]; then
+        curl -s -w "\n%{http_code}" -X "$method" "${API_URL}${endpoint}" \
+            -H "Content-Type: application/json" -H "X-API-Key: $API_KEY" -d "$data"
+    else
+        curl -s -w "\n%{http_code}" -X "$method" "${API_URL}${endpoint}" \
+            -H "X-API-Key: $API_KEY"
+    fi
+}
+
+# 智能选择VM
+select_vm() {
+    local vm_id="$1"
+    if [ -z "$vm_id" ] && [ -f "$LAST_VM_FILE" ]; then
+        vm_id=$(cat "$LAST_VM_FILE")
+    fi
+    if [ -z "$vm_id" ]; then
+        local response=$(api_call GET "/sandboxes")
+        vm_id=$(echo "$response" | sed '$d' | jq -r '.[0].sandboxID // empty')
+        [ -z "$vm_id" ] && error "没有运行中的VM"
+    fi
+    echo "$vm_id"
+}
+
+# 列出VM
+list_vms() {
+    log "获取虚拟机列表..."
+    local response=$(api_call GET "/sandboxes")
+    local code=$(echo "$response" | tail -n1)
+    local body=$(echo "$response" | sed '$d')
+    
+    [ "$code" != "200" ] && error "获取失败"
+    
+    local count=$(echo "$body" | jq 'length')
+    if [ "$count" -eq 0 ]; then
+        warn "当前没有运行中的虚拟机"
+        echo "创建: e2b create"
+        return
+    fi
+    
+    echo ""
+    printf "${CYAN}%-25s %-10s %-20s %-12s${NC}\n" "SANDBOX ID" "状态" "启动时间" "剩余时间"
+    echo -e "${CYAN}$(printf '=%.0s' {1..70})${NC}"
+    
+    echo "$body" | jq -r '.[] | "\(.sandboxID)|\(.state)|\(.startedAt)|\(.endAt)"' | while IFS='|' read -r id state start end; do
+        local now=$(date +%s)
+        local end_ts=$(date -d "$end" +%s 2>/dev/null || echo $now)
+        local min=$(( (end_ts - now) / 60 ))
+        
+        local time_color="${GREEN}"
+        [ $min -lt 5 ] && time_color="${YELLOW}"
+        [ $min -lt 2 ] && time_color="${RED}"
+        
+        printf "%-25s ${GREEN}%-10s${NC} %-20s ${time_color}%d分钟${NC}\n" \
+            "$id" "$state" "$(date -d "$start" '+%m-%d %H:%M')" "$min"
+    done
+    echo ""
+}
+
+# 创建VM
+create_vm() {
+    log "创建虚拟机..."
+    local response=$(api_call POST "/sandboxes" "{\"templateID\":\"$TEMPLATE_ID\",\"timeout\":$TIMEOUT}")
+    local code=$(echo "$response" | tail -n1)
+    local body=$(echo "$response" | sed '$d')
+    
+    if [ "$code" = "200" ] || [ "$code" = "201" ]; then
+        local vm_id=$(echo "$body" | jq -r '.sandboxID')
+        echo "$vm_id" > "$LAST_VM_FILE"
+        success "VM创建成功: $vm_id"
+        echo ""
+        echo "快捷命令:"
+        echo "  e2b info    # 查看详情"
+        echo "  e2b logs    # 查看日志"
+        echo "  e2b extend  # 延长时间"
+        echo "  e2b rm      # 删除VM"
+    else
+        error "创建失败: $(echo "$body" | jq -r '.message // .')"
+    fi
+}
+
+# VM详情
+get_info() {
+    local vm_id=$(select_vm "$1")
+    local response=$(api_call GET "/sandboxes/$vm_id")
+    local code=$(echo "$response" | tail -n1)
+    local body=$(echo "$response" | sed '$d')
+    
+    [ "$code" != "200" ] && error "获取失败"
+    
+    echo ""
+    echo "$body" | jq -r '"╔═══════════════════════════════════════╗",
+        "║ VM 详细信息                           ║",
+        "╠═══════════════════════════════════════╣",
+        "║ ID:      \(.sandboxID[:32])...",
+        "║ 状态:    \(.state)",
+        "║ 模板:    \(.alias)",
+        "║ CPU:     \(.cpuCount) 核",
+        "║ 内存:    \(.memoryMB) MB",
+        "║ 磁盘:    \(.diskSizeMB) MB (额外)",
+        "║ 启动:    \(.startedAt)",
+        "║ 过期:    \(.endAt)",
+        "╚═══════════════════════════════════════╝"'
+    echo ""
+}
+
+# 查看日志
+view_logs() {
+    local vm_id=$(select_vm "$1")
+    log "获取日志: $vm_id"
+    local response=$(api_call GET "/sandboxes/$vm_id/logs?start=0")
+    local code=$(echo "$response" | tail -n1)
+    local body=$(echo "$response" | sed '$d')
+    
+    [ "$code" = "200" ] && echo "$body" | jq -r '.logs[]? // .[] | "\(.timestamp) [\(.level // "INFO")] \(.message)"' || error "获取失败"
+}
+
+# 延长时间
+extend_vm() {
+    local vm_id=$(select_vm "$1")
+    local dur="${2:-3600}"
+    log "延长VM: $vm_id"
+    local response=$(api_call POST "/sandboxes/$vm_id/refreshes" "{\"duration\":$dur}")
+    local code=$(echo "$response" | tail -n1)
+    [ "$code" = "200" ] && success "已延长 $((dur/60)) 分钟" || error "延长失败"
+}
+
+# 删除VM
+delete_vm() {
+    local vm_id=$(select_vm "$1")
+    log "删除VM: $vm_id"
+    local response=$(api_call DELETE "/sandboxes/$vm_id")
+    local code=$(echo "$response" | tail -n1)
+    if [ "$code" = "200" ] || [ "$code" = "204" ]; then
+        success "已删除"
+        rm -f "$LAST_VM_FILE"
+    else
+        error "删除失败"
+    fi
+}
+
+# 帮助
+show_help() {
+    cat << 'EOF'
+╔════════════════════════════════════════════╗
+║  E2B CLI - 虚拟机命令行工具 v2.0           ║
+╚════════════════════════════════════════════╝
+
+用法: e2b <命令> [参数]
+
+命令:
+  create, new          创建新VM
+  ls, list             列出所有VM
+  info [vm-id]         查看VM详情
+  logs [vm-id]         查看VM日志
+  extend [vm-id] [秒]  延长生命周期(默认3600秒)
+  rm, delete [vm-id]   删除VM
+  help                 显示帮助
+
+示例:
+  e2b create           # 创建VM
+  e2b ls               # 列出所有VM
+  e2b info             # 查看最新VM详情
+  e2b extend 7200      # 延长2小时
+  e2b rm <vm-id>       # 删除指定VM
+
+环境变量:
+  E2B_API_KEY          API密钥
+  E2B_API_URL          API地址
+  E2B_TEMPLATE_ID      模板ID
+  E2B_TIMEOUT          超时时间(秒)
+
+注意: 
+  - 不指定vm-id时自动使用最近创建的VM
+  - diskSizeMB=0是正常的(只表示额外磁盘)
+  - rootfs固定1GB,不计入diskSizeMB
+
+EOF
+}
+
+# 主函数
+case "${1:-help}" in
+    create|new) create_vm ;;
+    ls|list) list_vms ;;
+    info|show) get_info "$2" ;;
+    logs|log) view_logs "$2" ;;
+    extend|renew) extend_vm "$2" "$3" ;;
+    rm|delete) delete_vm "$2" ;;
+    *) show_help ;;
+esac
