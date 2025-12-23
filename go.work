@@ -1,6 +1,7 @@
 go 1.25.4
 
 use (
+	./cmd/test-create-vm
 	./local-deploy
 	./packages/api
 	./packages/clickhouse
@@ -11,7 +12,6 @@ use (
 	./packages/local-dev
 	./packages/orchestrator
 	./packages/shared
-	./cmd/test-create-vm
 
 	./tests/integration
 )

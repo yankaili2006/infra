@@ -260,6 +260,17 @@ func (o *Orchestrator) CreateSandbox(
 	startTime = time.Now()
 	endTime = startTime.Add(timeout)
 
+	// Safely dereference pointer fields with defaults to prevent panic
+	var totalDiskSizeMb int64 = 512 // Default 512MB
+	if build.TotalDiskSizeMb != nil {
+		totalDiskSizeMb = *build.TotalDiskSizeMb
+	}
+
+	var envdVersion string = "v0.0.1" // Default envd version
+	if build.EnvdVersion != nil {
+		envdVersion = *build.EnvdVersion
+	}
+
 	sbx = sandbox.NewSandbox(
 		sandboxID,
 		build.EnvID,
@@ -273,11 +284,11 @@ func (o *Orchestrator) CreateSandbox(
 		startTime,
 		endTime,
 		build.Vcpu,
-		*build.TotalDiskSizeMb,
+		totalDiskSizeMb,
 		build.RamMb,
 		build.KernelVersion,
 		build.FirecrackerVersion,
-		*build.EnvdVersion,
+		envdVersion,
 		node.ID,
 		node.ClusterID,
 		autoPause,

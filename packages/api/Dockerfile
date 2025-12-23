@@ -3,19 +3,19 @@ ARG ALPINE_VERSION=3.22
 
 FROM golang:${GOLANG_VERSION}-alpine${ALPINE_VERSION} AS builder
 
+# Set GOPROXY for China network (default if not passed as arg)
+ENV GOPROXY=https://goproxy.cn,direct
+ENV GOSUMDB=off
+
 RUN apk add --no-cache make git
 
-# Proxy configuration for go mod download
-ARG HTTP_PROXY
-ARG HTTPS_PROXY
-ARG NO_PROXY
-ARG GOPROXY
+# Proxy configuration for go mod download (can be overridden)
+ARG HTTP_PROXY=""
+ARG HTTPS_PROXY=""
+ARG NO_PROXY=""
 ENV HTTP_PROXY=${HTTP_PROXY}
 ENV HTTPS_PROXY=${HTTPS_PROXY}
 ENV NO_PROXY=${NO_PROXY}
-ENV GOPROXY=${GOPROXY}
-# Disable checksum verification for local development (proxy interference)
-ENV GOSUMDB=off
 
 # Cached golang dependencies
 WORKDIR /build/shared

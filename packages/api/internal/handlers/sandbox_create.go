@@ -216,7 +216,20 @@ func (a *APIStore) PostSandboxes(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, &sbx)
+	// Add defensive check for nil sandbox before serialization
+	if sbx == nil {
+		logger.L().Error(ctx, "Sandbox created but returned nil object")
+		a.sendAPIStoreError(c, http.StatusInternalServerError, "Sandbox created but response object is nil")
+
+		return
+	}
+
+	// Log successful sandbox creation before returning response
+	logger.L().Info(ctx, "Sandbox created successfully, returning response",
+		zap.String("sandboxID", sbx.SandboxID),
+		zap.String("templateID", sbx.TemplateID))
+
+	c.JSON(http.StatusCreated, sbx)
 }
 
 func (a *APIStore) getEnvdAccessToken(envdVersion *string, sandboxID string) (string, *api.APIError) {
