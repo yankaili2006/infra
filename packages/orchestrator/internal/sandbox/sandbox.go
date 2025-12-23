@@ -425,27 +425,41 @@ func (f *Factory) ResumeSandbox(
 
 	// No need to start in background since SimpleReadonlyProvider.Start() is a no-op
 
-	// Memfile is optional for cold start - if not available, will trigger cold boot instead of snapshot resume
+	// Check if we have BOTH memfile and snapfile for snapshot resume
+	// Uffd server should only start if we're doing a snapshot resume (need both files)
 	memfile, err := t.Memfile(ctx)
 	if err != nil {
-		logger.L().Warn(ctx, "memfile not available, will use cold start if snapfile also missing", zap.Error(err))
+		logger.L().Warn(ctx, "memfile not available, will use cold start", zap.Error(err))
 		memfile = nil
 	} else {
 		_, err = memfile.Size()
 		if err != nil {
-			logger.L().Warn(ctx, "failed to get memfile size, will use cold start if snapfile missing", zap.Error(err))
+			logger.L().Warn(ctx, "failed to get memfile size, will use cold start", zap.Error(err))
 			memfile = nil
 		} else {
 			telemetry.ReportEvent(ctx, "got template memfile")
 		}
 	}
 
+	// Check snapfile availability to determine if we can do snapshot resume
+	snapfile, err := t.Snapfile()
+	hasSnapfile := (err == nil && snapfile != nil)
+	if !hasSnapfile {
+		if err != nil {
+			logger.L().Warn(ctx, "snapfile not available, will use cold start", zap.Error(err))
+		} else {
+			logger.L().Warn(ctx, "snapfile is nil, will use cold start")
+		}
+	} else {
+		telemetry.ReportEvent(ctx, "got template snapfile")
+	}
+
 	fcUffdPath := sandboxFiles.SandboxUffdSocketPath()
 
-	// Only serve memory if memfile is available (for snapshot resume)
-	// For cold start, fcUffd will not be used
+	// Only serve memory if BOTH memfile and snapfile are available (for snapshot resume)
+	// For cold start, uffd is not needed and should not be started
 	var fcUffd uffd.MemoryBackend
-	if memfile != nil {
+	if memfile != nil && hasSnapfile {
 		fcUffd, err = serveMemory(
 			execCtx,
 			cleanup,
@@ -456,9 +470,9 @@ func (f *Factory) ResumeSandbox(
 		if err != nil {
 			return nil, fmt.Errorf("failed to serve memory: %w", err)
 		}
-		telemetry.ReportEvent(ctx, "started serving memory")
+		telemetry.ReportEvent(ctx, "started serving memory for snapshot resume")
 	} else {
-		// For cold start without memfile, use NoopMemory
+		// For cold start (missing memfile or snapfile), use NoopMemory
 		fcUffd = uffd.NewNoopMemory(0, 4096)
 		telemetry.ReportEvent(ctx, "using noop memory for cold start")
 	}
@@ -518,12 +532,10 @@ func (f *Factory) ResumeSandbox(
 
 	telemetry.ReportEvent(ctx, "created FC process")
 
-	// todo: check if kernel, firecracker, and envd versions exist
-	snapfile, err := t.Snapfile()
-
+	// Use the snapfile availability we already checked earlier
 	// Try resume from snapshot if available, otherwise cold start
 	var fcStartErr error
-	if err != nil || snapfile == nil {
+	if !hasSnapfile {
 		// Cold start without snapshot
 		telemetry.ReportEvent(ctx, "using cold start (no snapshot)")
 
@@ -548,7 +560,7 @@ func (f *Factory) ResumeSandbox(
 			},
 		)
 	} else {
-		telemetry.ReportEvent(ctx, "got snapfile")
+		telemetry.ReportEvent(ctx, "using snapshot resume")
 
 		fcStartErr = fcHandle.Resume(
 			uffdStartCtx,
