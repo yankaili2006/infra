@@ -10,6 +10,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
 	"os/exec"
 	"syscall"
 
@@ -132,11 +133,54 @@ func (f *Forwarder) StartForwarding(ctx context.Context) {
 }
 
 func (f *Forwarder) startPortForwarding(ctx context.Context, p *PortToForward) {
+	// ***** DIAGNOSTIC CODE - CLAUDE 2025-12-23 *****
+	f.logger.Error().
+		Str("VERSION_CHECK", "CLAUDE_MODIFIED_VERSION_2025-12-23-20-35").
+		Msg(">>>>> PORT FORWARDING FUNCTION ENTRY - IF YOU SEE THIS, NEW CODE IS RUNNING <<<<<")
+	// ***** END DIAGNOSTIC CODE *****
+
 	// https://unix.stackexchange.com/questions/311492/redirect-application-listening-on-localhost-to-listening-on-external-interface
 	// socat -d -d TCP4-LISTEN:4000,bind=169.254.0.21,fork TCP4:localhost:4000
 	// reuseaddr is used to fix the "Address already in use" error when restarting socat quickly.
+
+	// Try to find socat - first check absolute path, then PATH
+	socatPath := "/usr/bin/socat"
+	statInfo, statErr := os.Stat(socatPath)
+	if os.IsNotExist(statErr) {
+		f.logger.Warn().
+			Str("path", socatPath).
+			Msg("socat not found at /usr/bin/socat, trying PATH")
+
+		// If /usr/bin/socat doesn't exist, try looking in PATH
+		foundPath, lookErr := exec.LookPath("socat")
+		if lookErr != nil {
+			f.logger.
+				Error().
+				Err(lookErr).
+				Str("attempted_path", socatPath).
+				Msg("Failed to find socat binary")
+			return
+		}
+		socatPath = foundPath
+		f.logger.Info().
+			Str("found_path", socatPath).
+			Msg("Found socat via PATH")
+	} else if statErr != nil {
+		f.logger.Error().
+			Err(statErr).
+			Str("path", socatPath).
+			Msg("Error stating socat")
+		return
+	} else {
+		f.logger.Info().
+			Str("path", socatPath).
+			Int64("size", statInfo.Size()).
+			Str("mode", statInfo.Mode().String()).
+			Msg("socat found at /usr/bin/socat")
+	}
+
 	cmd := exec.CommandContext(ctx,
-		"socat", "-d", "-d", "-d",
+		socatPath, "-d", "-d", "-d",
 		fmt.Sprintf("TCP4-LISTEN:%v,bind=%s,reuseaddr,fork", p.port, f.sourceIP.To4()),
 		fmt.Sprintf("TCP%d:localhost:%v", p.family, p.port),
 	)

@@ -77,7 +77,7 @@ job "api" {
         ENVIRONMENT = "development"
 
         # 数据库连接
-        POSTGRES_CONNECTION_STRING   = "postgres://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable"
+        POSTGRES_CONNECTION_STRING   = "postgres://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable&connect_timeout=30"
         CLICKHOUSE_CONNECTION_STRING = "clickhouse://clickhouse:clickhouse@127.0.0.1:9000/clickhouse"
 
         # Redis

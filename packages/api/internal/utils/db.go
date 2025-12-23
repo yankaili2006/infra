@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/pressly/goose/v3"
+	_ "github.com/lib/pq"
 	"go.uber.org/zap"
 
 	"github.com/e2b-dev/infra/packages/shared/pkg/logger"

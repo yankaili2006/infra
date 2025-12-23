@@ -552,7 +552,7 @@ func (f *Factory) ResumeSandbox(
 			fc.ProcessOptions{
 				IoEngine: func() *string { s := "Sync"; return &s }(), // Use Sync engine for testing direct file access
 				InitScriptPath: "/sbin/init",
-				KernelLogs: false,
+				KernelLogs: true,  // ✅ ENABLED to capture VM boot messages
 				SystemdToKernelLogs: false,
 				KvmClock: false,
 				Stdout: nil,
