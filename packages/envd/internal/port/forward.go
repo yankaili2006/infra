@@ -26,6 +26,9 @@ const (
 	PortStateDelete  PortState = "DELETE"
 )
 
+// REVERT: Changed back to .21 (guest side) - 2025-12-25
+// envd runs INSIDE the guest VM, so socat must bind to the guest's own IP (169.254.0.21)
+// NOT to the host side of tap0 (169.254.0.22) which is not accessible from inside the guest
 var defaultGatewayIP = net.IPv4(169, 254, 0, 21)
 
 type PortToForward struct {
@@ -56,8 +59,12 @@ func NewForwarder(
 		logger,
 		"port-forwarder",
 		// We only want to forward ports that are actively listening on localhost.
+		// CRITICAL FIX 2025-12-25: Removed "::" from filter
+		// "::" means "all IPv6 interfaces" (like 0.0.0.0 for IPv4), NOT localhost
+		// Services listening on all interfaces (0.0.0.0 or ::) should NOT be forwarded
+		// because they're already accessible from outside. Only forward localhost-only services.
 		&ScannerFilter{
-			IPs:   []string{"127.0.0.1", "localhost", "::1", "::"},
+			IPs:   []string{"127.0.0.1", "localhost", "::1"},
 			State: "LISTEN",
 		},
 	)

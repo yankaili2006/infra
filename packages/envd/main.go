@@ -197,6 +197,9 @@ func main() {
 				middleware.Wrap(handler),
 			),
 		),
+		// Listen on all IPv4 interfaces so envd is accessible from outside the VM
+		// The port forwarding scanner filter has been fixed to exclude "::" (all interfaces)
+		// so envd won't be incorrectly forwarded by socat
 		Addr: fmt.Sprintf("0.0.0.0:%d", port),
 		// We remove the timeouts as the connection is terminated by closing of the sandbox and keepalive close.
 		ReadTimeout:  0,

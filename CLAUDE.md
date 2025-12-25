@@ -1628,3 +1628,514 @@ nomad alloc logs $ORCH_ALLOC 2>&1 | grep -E "cold start|Running Firecracker|init
 - **Lines of Documentation Added**: ~600 lines
 
 **Status: Init system debugging COMPLETE. VM creation working. 🎉**
+
+---
+
+## 🚨 Critical Issue: Hardcoded Rootfs Path in sandbox.go (December 24, 2025)
+
+### Issue Discovered
+
+**Location**: `/home/primihub/pcloud/infra/packages/orchestrator/internal/sandbox/sandbox.go:416`
+
+**Problem**: The orchestrator contains **HARDCODED test code** that bypasses the normal NBD provider and uses a fixed rootfs path:
+
+```go
+// Line 413-416 (BEFORE FIX)
+// TEMPORARY TEST: Use SimpleReadonlyProvider to bypass NBD and test direct file access
+testRootfsPath := "/home/primihub/e2b-storage/e2b-template-storage/fcb118f7-4d32-45d0-a935-13f3e630ecbb/rootfs.ext4"
+rootfsOverlay, err := rootfs.NewSimpleReadonlyProvider(testRootfsPath)
+```
+
+**Impact**:
+- ❌ VM creation **ALWAYS uses the old build ID** `fcb118f7-4d32-45d0-a935-13f3e630ecbb`
+- ❌ Modifications to the current template (`9ac9c8b9-9b8b-476c-9238-8266af308c32`) are **IGNORED**
+- ❌ Guest init script modifications don't take effect
+- ❌ envd binary updates don't take effect
+- ❌ Leads to confusing debugging - logs show messages from OLD init scripts
+
+### Symptoms
+
+When creating VMs, guest console outputs messages that **don't exist in the current rootfs**:
+```
+2025-12-24T03:44:06.666Z  --- [GUEST] Network Alignment Started ---
+2025-12-24T03:44:06.695Z  --- [GUEST] Starting envd ---
+```
+
+But searching the rootfs shows:
+```bash
+$ grep -r "Network Alignment" /mnt/e2b-rootfs
+# Returns nothing!
+```
+
+### Root Cause Analysis
+
+1. **Test Code Left in Production**: The `SimpleReadonlyProvider` code (lines 413-424) was meant for debugging NBD issues but was never removed
+2. **Hardcoded Build ID**: Instead of using `runtime.TemplateConfig.BuildID`, it uses a fixed string
+3. **No Dynamic Path Resolution**: The path doesn't adapt to different templates or builds
+
+### Fix Applied (December 24, 2025)
+
+```go
+// Line 413-416 (AFTER FIX)
+// TEMPORARY TEST: Use SimpleReadonlyProvider to bypass NBD and test direct file access
+// UPDATED: Use correct build ID for base-template
+testRootfsPath := "/home/primihub/e2b-storage/e2b-template-storage/9ac9c8b9-9b8b-476c-9238-8266af308c32/rootfs.ext4"
+rootfsOverlay, err := rootfs.NewSimpleReadonlyProvider(testRootfsPath)
+```
+
+### Proper Solution (TODO)
+
+**The hardcoded test code should be completely removed** and replaced with the original NBD provider:
+
+```go
+// CORRECT PRODUCTION CODE (currently commented out around line 413):
+rootfsProvider, err := rootfs.NewNBDProvider(
+    readonlyRootfs,
+    sandboxFiles.SandboxCacheRootfsPath(f.config),
+    f.device Pool,
+)
+if err != nil {
+    return nil, fmt.Errorf("failed to create rootfs overlay: %w", err)
+}
+cleanup.Add(ctx, rootfsProvider.Close)
+go func() {
+    runErr := rootfsProvider.Start(execCtx)
+    if runErr != nil {
+        logger.L().Error(ctx, "rootfs overlay error", zap.Error(runErr))
+    }
+}()
+
+rootfsPath, err := rootfsProvider.Path()
+```
+
+### Prerequisites for Removing Hardcoded Path
+
+Before removing the SimpleReadonlyProvider workaround:
+1. ✅ NBD kernel module must be loaded: `sudo modprobe nbd max_part=8 nbds_max=64`
+2. ✅ Verify `lsmod | grep nbd` shows the module
+3. ✅ Ensure NBD device pool is initialized in orchestrator config
+4. 🔲 Test NBD provider thoroughly to ensure it works reliably
+
+### Diagnostic Commands
+
+```bash
+# Check which rootfs is actually being used
+sudo lsof -p $(pgrep orchestrator) | grep rootfs
+
+# Find hardcoded path in code
+grep -n "testRootfsPath" /home/primihub/pcloud/infra/packages/orchestrator/internal/sandbox/sandbox.go
+
+# Verify build ID mapping in database
+docker exec local-dev-postgres-1 psql -U postgres -d postgres -c \
+  "SELECT e.id, b.id FROM envs e JOIN env_builds b ON e.id = b.env_id WHERE e.id = 'base-template-000-0000-0000-000000000001';"
+```
+
+### Lessons Learned
+
+⭐ **Never leave test/debug code with hardcoded paths in production code**
+⭐ **Always use configuration or dynamic resolution for file paths**
+⭐ **Remove temporary workarounds once the underlying issue is fixed**
+⭐ **Document why workarounds exist and when they should be removed**
+⭐ **Guest console output that doesn't match rootfs files = wrong rootfs being loaded**
+
+**Status**: Fixed for current build (9ac9c8b9...), but hardcoded path still exists and will break for other templates. **Permanent fix needed: restore NBD provider code.**
+
+---
+
+## 🚨 CRITICAL CORRECTION: Working E2B Rootfs Does NOT Use Systemd! (December 24, 2025)
+
+### ⚠️ IMPORTANT UPDATE - Original Analysis Was WRONG
+
+**After recovering the working rootfs from a running VM (PID 3916206), we discovered the following:**
+
+❌ **INCORRECT ASSUMPTION**: E2B requires systemd as init system
+✅ **ACTUAL TRUTH**: The working E2B rootfs uses a **simple shell script as init**, NOT systemd!
+
+This is a **critical correction** to the earlier analysis below. The working rootfs (build ID `fcb118f7-4d32-45d0-a935-13f3e630ecbb`) successfully running since Dec 23 uses:
+
+1. **Simple shell script** at `/sbin/init` (522 bytes)
+2. **envd wrapper script** at `/usr/local/bin/envd` (495 bytes)
+3. **Actual envd binary** at `/usr/local/bin/envd.real` (~15MB)
+4. **Manual network configuration** via wrapper script: `ip addr add 169.254.0.21/30 dev eth0`
+
+**Key Components of Working Init System**:
+
+```bash
+# /sbin/init - Simple shell script (NOT systemd!)
+#!/bin/sh
+# E2B Init Script
+
+# Redirect output to serial console
+exec > /dev/ttyS0 2>&1
+
+echo "=== E2B Guest Init Starting ==="
+
+# Mount essential filesystems
+mount -t proc proc /proc
+mount -t sysfs sysfs /sys
+mount -t devtmpfs devtmpfs /dev
+
+# Configure network
+ip link set lo up
+ip link set eth0 up
+
+# Wait for network
+sleep 1
+
+echo "=== Starting envd daemon ==="
+# Start envd on port 49983
+/usr/local/bin/envd &
+
+echo "=== Init complete, envd started ==="
+
+# Keep init running forever
+while true; do
+    sleep 100
+done
+```
+
+**envd Wrapper Script** (`/usr/local/bin/envd`):
+```bash
+#!/bin/sh
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+exec > /dev/ttyS0 2>&1
+
+echo "--- [GUEST] Network Alignment Started ---"
+
+# Force network interface up and set IP (matching Firecracker boot_args)
+/usr/bin/ip link set lo up
+/usr/bin/ip link set eth0 up
+/usr/bin/ip addr add 169.254.0.21/30 dev eth0 2>/dev/null || echo "IP already set"
+
+echo "Current IP Config:"
+/usr/bin/ip addr show eth0
+
+echo "--- [GUEST] Starting envd ---"
+exec /usr/local/bin/envd.real --debug "$@"
+```
+
+**Why This Matters**:
+- No systemd installation required
+- No systemd service files needed
+- Simpler, lighter weight init process
+- Faster boot times
+- Manual network configuration gives precise control
+
+---
+
+## 🚨 ~~Critical Discovery: E2B Rootfs Requires Systemd (December 24, 2025)~~ ← INCORRECT!
+
+**⚠️ NOTE: The analysis below was based on reading official build-template documentation. However, **actual recovery of a working rootfs proves this is NOT how the current working system operates**. The text below is kept for historical reference but is INCORRECT.**
+
+### Issue Summary
+
+**Problem**: Manually creating rootfs from a bare Ubuntu Docker image results in VMs that boot successfully but **envd daemon does not start** and cannot be reached.
+
+**~~Root Cause~~** (**INCORRECT**): ~~E2B VMs require a **complete systemd-based init system**, not a simple shell script. The official E2B template uses systemd as PID 1, with envd configured as a systemd service.~~
+
+**ACTUAL Root Cause** (**CORRECT**): The working E2B rootfs uses simple shell scripts with wrapper-based envd startup, NOT systemd!
+
+### Symptoms
+
+When creating a minimal rootfs from Ubuntu Docker export:
+- ✅ VM boots successfully
+- ✅ Kernel loads and rootfs mounts
+- ✅ Network interface gets IP address
+- ❌ envd daemon does not respond on port 49983
+- ❌ Orchestrator gets "connection refused" errors
+
+**Error in Logs**:
+```
+Post "http://10.11.0.36:49983/init": dial tcp 10.11.0.36:49983: connect: connection refused
+```
+
+### Root Cause Analysis
+
+#### Official E2B Rootfs Structure
+
+The official `build-template` tool creates a **fully-provisioned system** with:
+
+1. **systemd as Init System** (`/lib/systemd/systemd` symlinked to `/usr/sbin/init`)
+2. **Required System Packages**:
+   - systemd, systemd-sysv
+   - openssh-server
+   - sudo
+   - chrony (time synchronization)
+   - linuxptp (PTP hardware clock sync)
+   - socat
+   - curl, ca-certificates
+
+3. **envd Systemd Service** (`/etc/systemd/system/envd.service`):
+```ini
+[Unit]
+Description=Env Daemon Service
+After=multi-user.target
+
+[Service]
+Type=simple
+Restart=always
+User=root
+Group=root
+Environment=GOTRACEBACK=all
+LimitCORE=infinity
+ExecStart=/bin/bash -l -c "/usr/bin/envd"
+OOMPolicy=continue
+OOMScoreAdjust=-1000
+Environment="GOMEMLIMIT=<memory-limit>MiB"
+
+Delegate=yes
+MemoryMin=50M
+MemoryLow=100M
+CPUAccounting=yes
+CPUWeight=1000
+
+[Install]
+WantedBy=multi-user.target
+```
+
+4. **System Configuration**:
+   - Chrony (PTP hardware clock for time sync via `/dev/ptp0`)
+   - SSH server with root login enabled
+   - Serial console disabled (`serial-getty@ttyS0.service` masked)
+   - Network wait disabled (`systemd-networkd-wait-online.service` masked)
+   - First boot wizard disabled (`systemd-firstboot.service` masked)
+
+#### Why Simple Shell Script Init Fails
+
+A minimal shell script like this is **insufficient**:
+
+```bash
+#!/bin/sh
+mount -t proc proc /proc 2>/dev/null || true
+mount -t sysfs sys /sys 2>/dev/null || true
+mount -t devtmpfs dev /dev 2>/dev/null || true
+
+ip link set lo up 2>/dev/null || true
+ip link set eth0 up 2>/dev/null || true
+
+/usr/bin/envd &
+
+while true; do
+    sleep 100
+done
+```
+
+**Problems**:
+- No proper service management (envd crashes won't be detected/restarted)
+- Missing systemd infrastructure (cgroups, resource limits, logging)
+- No PTP time synchronization (required for accurate timestamps)
+- envd expects systemd environment variables and resource controls
+- No SSH access for debugging
+
+### Correct Solution: Use Official build-template Tool
+
+**Method 1: Automated Script (Recommended)**
+
+We created an automated rootfs creation script at `/home/primihub/pcloud/infra/scripts/create-e2b-rootfs.sh`:
+
+```bash
+#!/bin/bash
+# Usage:
+./scripts/create-e2b-rootfs.sh <build-id> <template-id> [kernel-version] [firecracker-version]
+
+# Example:
+./scripts/create-e2b-rootfs.sh 9ac9c8b9-9b8b-476c-9238-8266af308c32 base-template-000-0000-0000-000000000001
+```
+
+**What the script does**:
+1. ✅ Checks prerequisites (Docker, Go, NBD module)
+2. ✅ Sets required environment variables
+3. ✅ Builds build-template tool if needed
+4. ✅ Creates storage directories
+5. ✅ Runs build-template with proper configuration
+6. ✅ Verifies rootfs.ext4 and metadata.json creation
+7. ✅ Clears template caches
+8. ✅ Displays summary and next steps
+
+**Method 2: Manual build-template Invocation**
+
+```bash
+# 1. Load NBD module
+sudo modprobe nbd max_part=8 nbds_max=64
+
+# 2. Set environment variables
+export STORAGE_PROVIDER=Local
+export ARTIFACTS_REGISTRY_PROVIDER=Local
+export LOCAL_TEMPLATE_STORAGE_BASE_PATH=/home/primihub/e2b-storage/e2b-template-storage
+export BUILD_CACHE_BUCKET_NAME=/home/primihub/e2b-storage/e2b-build-cache
+export TEMPLATE_CACHE_DIR=/home/primihub/e2b-storage/e2b-template-cache
+export POSTGRES_CONNECTION_STRING="postgresql://postgres:postgres@localhost:5432/postgres?sslmode=disable"
+
+# 3. Build build-template tool
+cd /home/primihub/pcloud/infra/packages/orchestrator
+go build -o bin/build-template ./cmd/build-template/
+
+# 4. Run build-template
+./bin/build-template \
+  -build=9ac9c8b9-9b8b-476c-9238-8266af308c32 \
+  -template=base-template-000-0000-0000-000000000001 \
+  -kernel=vmlinux-5.10.223 \
+  -firecracker=v1.12.1_d990331
+```
+
+### What build-template Does Internally
+
+**Phase 1: Base Provisioning** (`internal/template/build/phases/base/provision.sh`)
+- Pulls base Docker image (default: ubuntu:22.04)
+- Installs systemd and system packages
+- Configures systemd services
+- Sets up SSH access
+- Configures chrony for time sync
+- Creates `/usr/sbin/init` symlink to systemd
+
+**Phase 2: Envd Integration** (`internal/template/build/core/rootfs/`)
+- Copies envd binary to `/usr/bin/envd`
+- Creates envd systemd service file
+- Enables envd service in systemd
+- Configures resource limits and OOM settings
+
+**Phase 3: Snapshot Creation** (if enabled)
+- Boots VM once to create initial snapshot
+- Captures memory state (memfile)
+- Creates filesystem snapshot (snapfile)
+- Stores in template storage for fast cold starts
+
+### Filesystem Comparison
+
+**Minimal Manual Rootfs** (❌ Insufficient):
+```
+/
+├── bin/
+│   └── sh -> dash
+├── usr/
+│   └── bin/
+│       └── envd (15MB, static binary)
+└── sbin/
+    └── init (shell script)
+```
+
+**Official E2B Rootfs** (✅ Complete):
+```
+/
+├── bin/ (standard Unix binaries)
+├── lib/systemd/systemd (init binary)
+├── usr/
+│   ├── bin/
+│   │   └── envd
+│   └── sbin/
+│       └── init -> /lib/systemd/systemd
+├── etc/
+│   ├── systemd/system/
+│   │   ├── envd.service
+│   │   └── multi-user.target.wants/
+│   │       └── envd.service -> ../envd.service
+│   ├── chrony/
+│   │   └── chrony.conf
+│   └── ssh/
+│       └── sshd_config
+└── [complete Ubuntu 22.04 filesystem]
+```
+
+### Lessons Learned
+
+⭐⭐⭐ **CRITICAL**: **Never create E2B rootfs manually from Docker export**
+- E2B requires full systemd infrastructure
+- envd depends on systemd service management
+- Time synchronization (chrony + PTP) is required
+- Resource limits and cgroups must be configured
+
+⭐⭐ **Always use official build-template tool** for production templates
+- Ensures all dependencies are installed
+- Configures systemd services correctly
+- Sets up proper resource limits
+- Creates working snapshots for fast boot
+
+⭐ **Minimal init scripts are only for debugging kernel boot**
+- Use them to verify kernel loads and mounts rootfs
+- Not suitable for actual E2B VM operation
+- envd will not work without systemd
+
+⭐ **VM booting successfully ≠ VM working correctly**
+- Kernel can boot and mount filesystem
+- But if init system is wrong, services won't start
+- Always check envd responds on port 49983
+
+### Previous Debugging Attempts (December 24, 2025)
+
+We spent significant time trying to make a minimal rootfs work:
+
+1. ✅ Created 1GB ext4 filesystem
+2. ✅ Extracted Ubuntu 22.04 Docker image
+3. ✅ Copied statically-linked envd binary
+4. ✅ Created init script with correct shebang (no escaping issues)
+5. ✅ Verified init is executable
+6. ✅ VM booted successfully
+7. ❌ envd never responded
+
+**Final realization**: Checked official build process in `provision.sh` and discovered it uses systemd, not a shell script.
+
+### Diagnostic Commands
+
+```bash
+# Check if rootfs has systemd
+sudo debugfs -R "ls -p /lib/systemd" /path/to/rootfs.ext4
+
+# Check envd service file exists
+sudo debugfs -R "cat /etc/systemd/system/envd.service" /path/to/rootfs.ext4
+
+# Verify init is symlinked to systemd
+sudo debugfs -R "stat /usr/sbin/init" /path/to/rootfs.ext4
+
+# Check what init binary is used
+file /path/to/mounted-rootfs/sbin/init
+# Should show: symbolic link to /lib/systemd/systemd
+```
+
+### Quick Reference
+
+**✅ DO**:
+- Use `/home/primihub/pcloud/infra/scripts/create-e2b-rootfs.sh` script
+- Or use `build-template` tool directly
+- Load NBD kernel module before building
+- Clear caches after creating new template
+
+**❌ DON'T**:
+- Manually create rootfs from Docker export for production
+- Use simple shell script as init
+- Skip systemd installation
+- Forget to configure envd systemd service
+
+### Testing New Rootfs
+
+After creating rootfs with build-template:
+
+```bash
+# 1. Clear caches
+sudo rm -rf /home/primihub/e2b-storage/e2b-template-cache/<build-id>
+
+# 2. Test VM creation
+curl -X POST http://localhost:3000/sandboxes \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: e2b_53ae1fed82754c17ad8077fbc8bcdd90" \
+  -d '{"templateID": "base-template-000-0000-0000-000000000001", "timeout": 300}'
+
+# 3. Check orchestrator logs
+ORCH_ALLOC=$(nomad job allocs orchestrator | grep running | awk '{print $1}')
+nomad alloc logs $ORCH_ALLOC 2>&1 | tail -100
+
+# 4. Verify envd responds
+# Should see successful connection to envd on port 49983
+```
+
+**Expected Success Indicators**:
+- ✅ VM boots and kernel loads
+- ✅ systemd starts as PID 1
+- ✅ envd.service starts automatically
+- ✅ envd responds on port 49983
+- ✅ Orchestrator successfully initializes envd
+- ✅ No "connection refused" errors
+
+**Status**: Rootfs creation process documented. Use automated script or build-template for all future rootfs creation. **Manual Docker export method is NOT SUPPORTED for production E2B VMs.**
+
+---
+

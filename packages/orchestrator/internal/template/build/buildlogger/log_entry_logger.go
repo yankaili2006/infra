@@ -36,7 +36,9 @@ func (b *LogEntryLogger) Write(p []byte) (n int, err error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	for line := range bytes.SplitSeq(p, []byte("\n")) {
+	// Use bytes.Split instead of bytes.SplitSeq for Go 1.22 compatibility
+	lines := bytes.Split(p, []byte("\n"))
+	for _, line := range lines {
 		if len(line) > 0 {
 			fields, err := logs.FlatJsonLogLineParser(string(line))
 			if err != nil {

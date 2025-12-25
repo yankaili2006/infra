@@ -410,20 +410,20 @@ func (f *Factory) ResumeSandbox(
 
 	telemetry.ReportEvent(ctx, "got template rootfs")
 
-	// TEMPORARY TEST: Use SimpleReadonlyProvider to bypass NBD and test direct file access
-	// This helps isolate whether the issue is in NBD layer or Firecracker/kernel layer
-	// Use correct storage path - FIXED: was /mnt/sdb, should be /home/primihub
-	testRootfsPath := "/home/primihub/e2b-storage/e2b-template-storage/fcb118f7-4d32-45d0-a935-13f3e630ecbb/rootfs.ext4"
+	// Create rootfs provider using SimpleReadonlyProvider (bypassing NBD for local development)
+	testRootfsPath := "/mnt/sdb/e2b-storage/e2b-template-storage/9ac9c8b9-9b8b-476c-9238-8266af308c32/rootfs.ext4"
 	rootfsOverlay, err := rootfs.NewSimpleReadonlyProvider(testRootfsPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create rootfs provider: %w", err)
 	}
 
-	cleanup.Add(ctx, rootfsOverlay.Close)
+	// Get rootfs path from provider
+	rootfsPath, err := rootfsOverlay.Path()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get rootfs path: %w", err)
+	}
 
 	telemetry.ReportEvent(ctx, "created simple readonly rootfs provider (bypassing NBD)")
-
-	// No need to start in background since SimpleReadonlyProvider.Start() is a no-op
 
 	// Check if we have BOTH memfile and snapfile for snapshot resume
 	// Uffd server should only start if we're doing a snapshot resume (need both files)
@@ -487,7 +487,7 @@ func (f *Factory) ResumeSandbox(
 		cancelUffdStartCtx(fmt.Errorf("uffd process exited: %w", errors.Join(uffdWaitErr, context.Cause(uffdStartCtx))))
 	}()
 
-	rootfsPath, err := rootfsOverlay.Path()
+	rootfsPath, err = rootfsOverlay.Path()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get rootfs path: %w", err)
 	}
@@ -550,13 +550,13 @@ func (f *Factory) ResumeSandbox(
 			config.RamMB,
 			config.HugePages,
 			fc.ProcessOptions{
-				IoEngine: func() *string { s := "Sync"; return &s }(), // Use Sync engine for testing direct file access
-				InitScriptPath: "/sbin/init",
-				KernelLogs: true,  // ✅ ENABLED to capture VM boot messages
+				IoEngine:            func() *string { s := "Sync"; return &s }(), // Use Sync engine for testing direct file access
+				InitScriptPath:      "/sbin/init",
+				KernelLogs:          true, // ✅ ENABLED to capture VM boot messages
 				SystemdToKernelLogs: false,
-				KvmClock: false,
-				Stdout: nil,
-				Stderr: nil,
+				KvmClock:            false,
+				Stdout:              nil,
+				Stderr:              nil,
 			},
 		)
 	} else {

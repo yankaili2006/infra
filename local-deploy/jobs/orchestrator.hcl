@@ -54,6 +54,7 @@ job "orchestrator" {
         # 存储配置（使用本地文件系统）
         STORAGE_PROVIDER            = "Local"
         ARTIFACTS_REGISTRY_PROVIDER = "Local"
+        TEMPLATE_BUCKET_NAME        = "local-templates"
 
         # 本地路径配置
         FIRECRACKER_VERSIONS_DIR = "/home/primihub/pcloud/infra/packages/fc-versions/builds"
@@ -63,12 +64,12 @@ job "orchestrator" {
         SANDBOX_DIR              = "/home/primihub/e2b-storage/e2b-fc-vm"
 
         # 缓存目录
-        LOCAL_TEMPLATE_STORAGE_BASE_PATH = "/home/primihub/e2b-storage/e2b-template-storage"
-        BUILD_CACHE_BUCKET_NAME          = "/home/primihub/e2b-storage/e2b-build-cache"
+        LOCAL_TEMPLATE_STORAGE_BASE_PATH = "/mnt/sdb/e2b-storage/e2b-template-storage"
+        BUILD_CACHE_BUCKET_NAME          = "/mnt/sdb/e2b-storage/e2b-build-cache"
         SANDBOX_CACHE_DIR                = "/home/primihub/e2b-storage/e2b-sandbox-cache"
         SNAPSHOT_CACHE_DIR               = "/home/primihub/e2b-storage/e2b-snapshot-cache"
-        TEMPLATE_CACHE_DIR               = "/home/primihub/e2b-storage/e2b-template-cache"
-        SHARED_CHUNK_CACHE_PATH          = "/home/primihub/e2b-storage/e2b-chunk-cache"
+        TEMPLATE_CACHE_DIR               = "/mnt/sdb/e2b-storage/e2b-template-cache"
+        SHARED_CHUNK_CACHE_PATH          = "/mnt/sdb/e2b-storage/e2b-chunk-cache"
 
         # 锁文件
         ORCHESTRATOR_LOCK_PATH = "/home/primihub/e2b-storage/e2b-orchestrator.lock"

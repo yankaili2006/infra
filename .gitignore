@@ -19,3 +19,6 @@ go.work.sum
 bionic.rootfs.ext4
 vmlinux-5.10.bin.1
 vmlinux-5.10.bin
+
+e2b-venv/
+bin/orchestrator
