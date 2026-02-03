@@ -1,0 +1,144 @@
+groups:
+  - name: api_alerts
+    interval: 30s
+    rules:
+      # API服务高CPU使用率
+      - alert: APIHighCPU
+        expr: rate(process_cpu_seconds_total{job="orchestration-api"}[5m]) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          service: api
+        annotations:
+          summary: "API服务CPU使用率过高"
+          description: "API服务CPU使用率超过80%，当前值: {{ $value | humanizePercentage }}"
+
+      # API服务高内存使用率
+      - alert: APIHighMemory
+        expr: (process_resident_memory_bytes{job="orchestration-api"} / 1024 / 1024 / 1024) > 3.4
+        for: 5m
+        labels:
+          severity: warning
+          service: api
+        annotations:
+          summary: "API服务内存使用率过高"
+          description: "API服务内存使用超过3.4GB (85% of 4GB)，当前值: {{ $value | humanize }}GB"
+
+      # API错误率过高
+      - alert: APIHighErrorRate
+        expr: (rate(http_requests_total{job="orchestration-api",status=~"5.."}[5m]) / rate(http_requests_total{job="orchestration-api"}[5m])) > 0.05
+        for: 3m
+        labels:
+          severity: critical
+          service: api
+        annotations:
+          summary: "API错误率过高"
+          description: "API 5xx错误率超过5%，当前值: {{ $value | humanizePercentage }}"
+
+      # API响应时间过长
+      - alert: APISlowResponse
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="orchestration-api"}[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+          service: api
+        annotations:
+          summary: "API响应时间过长"
+          description: "API P95响应时间超过2秒，当前值: {{ $value | humanizeDuration }}"
+
+      # API服务不可用
+      - alert: APIDown
+        expr: up{job="orchestration-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: api
+        annotations:
+          summary: "API服务不可用"
+          description: "API服务已停止响应超过1分钟"
+
+  - name: orchestrator_alerts
+    interval: 30s
+    rules:
+      # Orchestrator高CPU
+      - alert: OrchestratorHighCPU
+        expr: rate(process_cpu_seconds_total{job="orchestrator"}[5m]) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          service: orchestrator
+        annotations:
+          summary: "Orchestrator CPU使用率过高"
+          description: "Orchestrator CPU使用率超过80%，当前值: {{ $value | humanizePercentage }}"
+
+      # Orchestrator高内存
+      - alert: OrchestratorHighMemory
+        expr: (process_resident_memory_bytes{job="orchestrator"} / 1024 / 1024 / 1024) > 3.4
+        for: 5m
+        labels:
+          severity: warning
+          service: orchestrator
+        annotations:
+          summary: "Orchestrator内存使用率过高"
+          description: "Orchestrator内存使用超过3.4GB，当前值: {{ $value | humanize }}GB"
+
+      # Orchestrator服务不可用
+      - alert: OrchestratorDown
+        expr: up{job="orchestrator"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: orchestrator
+        annotations:
+          summary: "Orchestrator服务不可用"
+          description: "Orchestrator服务已停止响应超过1分钟"
+
+  - name: sandbox_alerts
+    interval: 30s
+    rules:
+      # Sandbox创建失败率高
+      - alert: SandboxHighFailureRate
+        expr: (rate(sandbox_create_errors_total[5m]) / rate(sandbox_create_total[5m])) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          service: sandbox
+        annotations:
+          summary: "Sandbox创建失败率过高"
+          description: "Sandbox创建失败率超过10%，当前值: {{ $value | humanizePercentage }}"
+
+      # Sandbox数量过多
+      - alert: TooManySandboxes
+        expr: sandbox_active_count > 100
+        for: 5m
+        labels:
+          severity: warning
+          service: sandbox
+        annotations:
+          summary: "活跃Sandbox数量过多"
+          description: "活跃Sandbox数量超过100，当前值: {{ $value }}"
+
+  - name: system_alerts
+    interval: 30s
+    rules:
+      # 系统磁盘空间不足
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) < 0.15
+        for: 5m
+        labels:
+          severity: warning
+          service: system
+        annotations:
+          summary: "磁盘空间不足"
+          description: "根分区可用空间低于15%，当前值: {{ $value | humanizePercentage }}"
+
+      # 系统磁盘空间严重不足
+      - alert: DiskSpaceCritical
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) < 0.05
+        for: 2m
+        labels:
+          severity: critical
+          service: system
+        annotations:
+          summary: "磁盘空间严重不足"
+          description: "根分区可用空间低于5%，当前值: {{ $value | humanizePercentage }}"

@@ -1,0 +1,98 @@
+global:
+  resolve_timeout: 5m
+  # SMTP配置（需要根据实际情况修改）
+  smtp_smarthost: 'smtp.example.com:587'
+  smtp_from: 'alerts@e2b.local'
+  smtp_auth_username: 'alerts@e2b.local'
+  smtp_auth_password: 'CHANGE_ME'
+  smtp_require_tls: true
+
+# 告警路由配置
+route:
+  # 默认接收者
+  receiver: 'default-receiver'
+  # 分组等待时间
+  group_wait: 10s
+  # 分组间隔时间
+  group_interval: 10s
+  # 重复告警间隔
+  repeat_interval: 12h
+  # 分组标签
+  group_by: ['alertname', 'service', 'severity']
+
+  # 子路由
+  routes:
+    # 关键告警立即发送
+    - match:
+        severity: critical
+      receiver: 'critical-alerts'
+      group_wait: 0s
+      repeat_interval: 5m
+
+    # 警告级别告警
+    - match:
+        severity: warning
+      receiver: 'warning-alerts'
+      repeat_interval: 1h
+
+# 接收者配置
+receivers:
+  # 默认接收者（日志输出）
+  - name: 'default-receiver'
+    webhook_configs:
+      - url: 'http://localhost:9093/webhook'
+        send_resolved: true
+
+  # 关键告警接收者
+  - name: 'critical-alerts'
+    # Email通知
+    email_configs:
+      - to: 'oncall@example.com'
+        headers:
+          Subject: '[CRITICAL] E2B Infrastructure Alert'
+        html: |
+          <h2>Critical Alert</h2>
+          <p><strong>Alert:</strong> {{ .GroupLabels.alertname }}</p>
+          <p><strong>Service:</strong> {{ .GroupLabels.service }}</p>
+          <p><strong>Severity:</strong> {{ .GroupLabels.severity }}</p>
+          <p><strong>Description:</strong> {{ range .Alerts }}{{ .Annotations.description }}{{ end }}</p>
+          <p><strong>Time:</strong> {{ .StartsAt }}</p>
+
+    # Webhook通知（可配置Slack、PagerDuty等）
+    webhook_configs:
+      - url: 'http://localhost:9093/webhook/critical'
+        send_resolved: true
+
+  # 警告级别接收者
+  - name: 'warning-alerts'
+    email_configs:
+      - to: 'team@example.com'
+        headers:
+          Subject: '[WARNING] E2B Infrastructure Alert'
+        html: |
+          <h2>Warning Alert</h2>
+          <p><strong>Alert:</strong> {{ .GroupLabels.alertname }}</p>
+          <p><strong>Service:</strong> {{ .GroupLabels.service }}</p>
+          <p><strong>Description:</strong> {{ range .Alerts }}{{ .Annotations.description }}{{ end }}</p>
+
+# 抑制规则（防止告警风暴）
+inhibit_rules:
+  # 如果服务已经Down，抑制其他告警
+  - source_match:
+      alertname: 'APIDown'
+    target_match:
+      service: 'api'
+    equal: ['service']
+
+  - source_match:
+      alertname: 'OrchestratorDown'
+    target_match:
+      service: 'orchestrator'
+    equal: ['service']
+
+  # Critical告警会抑制Warning告警
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'service']
