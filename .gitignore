@@ -29,6 +29,7 @@ local-deploy/.ossutil_checkpoint/
 local-deploy/db-backups/
 local-deploy/postgres-backup/
 local-deploy/jobs.backup*/
+local-deploy/jobs/*.backup*
 local-deploy/*.backup
 
 # Compiled binaries
