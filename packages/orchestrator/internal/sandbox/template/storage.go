@@ -62,11 +62,14 @@ func NewStorage(
 		}
 
 		headerObject, err := persistence.OpenObject(ctx, headerObjectPath, headerObjectType)
-		if err != nil {
+		if err != nil && !errors.Is(err, storage.ErrObjectNotExist) {
 			return nil, err
 		}
 
-		diffHeader, err := header.Deserialize(ctx, headerObject)
+		var diffHeader *header.Header
+		if err == nil {
+			diffHeader, err = header.Deserialize(ctx, headerObject)
+		}
 
 		// If we can't find the diff header in storage, we switch to templates without a headers
 		if err != nil && !errors.Is(err, storage.ErrObjectNotExist) {

@@ -410,20 +410,33 @@ func (f *Factory) ResumeSandbox(
 
 	telemetry.ReportEvent(ctx, "got template rootfs")
 
-	// Create rootfs provider using SimpleReadonlyProvider (bypassing NBD for local development)
-	testRootfsPath := "/mnt/sdb/e2b-storage/e2b-template-storage/9ac9c8b9-9b8b-476c-9238-8266af308c32/rootfs.ext4"
-	rootfsOverlay, err := rootfs.NewSimpleReadonlyProvider(testRootfsPath)
+	// Create rootfs provider using NBD with copy-on-write overlay
+	// This ensures each VM has its own writable layer and doesn't modify the template
+	rootfsProvider, err := rootfs.NewNBDProvider(
+		readonlyRootfs,
+		sandboxFiles.SandboxCacheRootfsPath(f.config),
+		f.devicePool,
+	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create rootfs provider: %w", err)
+		return nil, fmt.Errorf("failed to create rootfs overlay: %w", err)
 	}
+	cleanup.Add(ctx, rootfsProvider.Close)
 
-	// Get rootfs path from provider
-	rootfsPath, err := rootfsOverlay.Path()
+	// Start the NBD provider in a goroutine
+	go func() {
+		runErr := rootfsProvider.Start(execCtx)
+		if runErr != nil {
+			logger.L().Error(ctx, "rootfs overlay error", zap.Error(runErr))
+		}
+	}()
+
+	// Get the NBD device path
+	rootfsPath, err := rootfsProvider.Path()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get rootfs path: %w", err)
 	}
 
-	telemetry.ReportEvent(ctx, "created simple readonly rootfs provider (bypassing NBD)")
+	telemetry.ReportEvent(ctx, "created NBD rootfs provider with copy-on-write overlay")
 
 	// Check if we have BOTH memfile and snapfile for snapshot resume
 	// Uffd server should only start if we're doing a snapshot resume (need both files)
@@ -487,11 +500,7 @@ func (f *Factory) ResumeSandbox(
 		cancelUffdStartCtx(fmt.Errorf("uffd process exited: %w", errors.Join(uffdWaitErr, context.Cause(uffdStartCtx))))
 	}()
 
-	rootfsPath, err = rootfsOverlay.Path()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get rootfs path: %w", err)
-	}
-
+	// rootfsPath already obtained earlier at line 437, no need to get it again
 	telemetry.ReportEvent(ctx, "got rootfs path")
 
 	ips := <-ipsCh
@@ -583,7 +592,7 @@ func (f *Factory) ResumeSandbox(
 
 	resources := &Resources{
 		Slot:   ips.slot,
-		rootfs: rootfsOverlay,
+		rootfs: rootfsProvider,
 		memory: fcUffd,
 	}
 

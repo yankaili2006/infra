@@ -293,7 +293,7 @@ func (p *Process) Create(
 		return fmt.Errorf("error symlinking rootfs: %w", err)
 	}
 
-	err = p.client.setRootfsDrive(ctx, p.rootfsPath, options.IoEngine)
+	err = p.client.setRootfsDrive(ctx, p.providerRootfsPath, options.IoEngine)
 	if err != nil {
 		fcStopErr := p.Stop(ctx)
 
