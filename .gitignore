@@ -22,3 +22,19 @@ vmlinux-5.10.bin
 
 e2b-venv/
 bin/orchestrator
+
+# Backup files and temporary data
+local-deploy/.last_e2b_backup
+local-deploy/.ossutil_checkpoint/
+local-deploy/db-backups/
+local-deploy/postgres-backup/
+local-deploy/jobs.backup*/
+local-deploy/*.backup
+
+# Compiled binaries
+packages/api/api
+packages/orchestrator/orchestrator
+
+# Separate git repositories
+surf/
+
