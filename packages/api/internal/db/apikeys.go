@@ -3,6 +3,8 @@ package db
 import (
 	"context"
 	"fmt"
+	"os"
+	"time"
 
 	"github.com/e2b-dev/infra/packages/api/internal/db/types"
 	sqlcdb "github.com/e2b-dev/infra/packages/db/client"
@@ -38,10 +40,13 @@ func validateTeamUsage(team queries.Team) error {
 }
 
 func GetTeamAuth(ctx context.Context, db *sqlcdb.Client, apiKey string) (*types.Team, error) {
+	// DEBUG: Write to debug file
+	os.WriteFile("/tmp/debug_api_key.txt", []byte(fmt.Sprintf("Hash: %s\nTime: %s\n", apiKey, time.Now())), 0644)
+
 	result, err := db.GetTeamWithTierByAPIKeyWithUpdateLastUsed(ctx, apiKey)
 	if err != nil {
 		errMsg := fmt.Errorf("failed to get team from API key: %w", err)
-
+		os.WriteFile("/tmp/debug_api_error.txt", []byte(fmt.Sprintf("Error: %v\n", err)), 0644)
 		return nil, errMsg
 	}
 

@@ -11,11 +11,37 @@ echo "E2B 本地部署 - 停止所有服务"
 echo "=========================================="
 echo ""
 
-# 项目路径
-PROJECT_ROOT="/mnt/sdb/pcloud/infra"
-COMPOSE_DIR="$PROJECT_ROOT/packages/local-dev"
+# 脚本目录
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PCLOUD_HOME="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 
-# 1. 停止 Nomad Jobs
+# 加载环境变量
+if [ -f "$PCLOUD_HOME/config/env.sh" ]; then
+    source "$PCLOUD_HOME/config/env.sh"
+fi
+
+# 设置默认值
+PCLOUD_HOME="${PCLOUD_HOME:-/home/primihub/pcloud}"
+E2B_STORAGE_PATH="${E2B_STORAGE_PATH:-$PCLOUD_HOME/../e2b-storage}"
+COMPOSE_DIR="$PCLOUD_HOME/infra/packages/local-dev"
+
+# 1. 停止前端应用
+echo "1. 停止前端应用..."
+FRONTEND_PIDS=$(pgrep -f "next dev" || true)
+if [ -n "$FRONTEND_PIDS" ]; then
+    echo "  停止 Fragments 和 Surf..."
+    pkill -SIGTERM -f "next dev" || true
+    sleep 2
+    if pgrep -f "next dev" > /dev/null; then
+        pkill -SIGKILL -f "next dev" || true
+    fi
+    echo -e "${GREEN}✓${NC} 前端应用已停止"
+else
+    echo "  前端应用未运行"
+fi
+echo ""
+
+# 2. 停止 Nomad Jobs
 echo "1. 停止 Nomad Jobs..."
 if command -v nomad &> /dev/null && nomad node status &> /dev/null 2>&1; then
     JOBS=$(nomad job status -short 2>/dev/null | tail -n +2 | awk '{print $1}')
@@ -33,8 +59,8 @@ else
 fi
 echo ""
 
-# 2. 停止 Nomad
-echo "2. 停止 Nomad..."
+# 3. 停止 Nomad
+echo "3. 停止 Nomad..."
 if pgrep -x "nomad" > /dev/null; then
     pkill -SIGTERM nomad
     sleep 2
@@ -47,8 +73,8 @@ else
 fi
 echo ""
 
-# 3. 停止 Consul
-echo "3. 停止 Consul..."
+# 4. 停止 Consul
+echo "4. 停止 Consul..."
 if pgrep -x "consul" > /dev/null; then
     pkill -SIGTERM consul
     sleep 2

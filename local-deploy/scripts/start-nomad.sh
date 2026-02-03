@@ -1,6 +1,13 @@
 #!/bin/bash
 set -e
 
+# 加载环境变量
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PCLOUD_HOME_TMP="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+if [ -f "$PCLOUD_HOME_TMP/config/env.sh" ]; then
+    source "$PCLOUD_HOME_TMP/config/env.sh"
+fi
+
 # 颜色定义
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -20,7 +27,9 @@ if ! command -v nomad &> /dev/null; then
 fi
 
 # 配置文件
-CONFIG_FILE="/mnt/sdb/pcloud/infra/local-deploy/nomad-dev.hcl"
+PCLOUD_HOME="${PCLOUD_HOME:-/home/primihub/pcloud}"
+E2B_STORAGE_PATH="${E2B_STORAGE_PATH:-$PCLOUD_HOME/../e2b-storage}"
+CONFIG_FILE="$PCLOUD_HOME/infra/local-deploy/nomad-dev.hcl"
 
 if [ ! -f "$CONFIG_FILE" ]; then
     echo -e "${RED}✗${NC} Nomad 配置文件不存在: $CONFIG_FILE"
@@ -61,8 +70,9 @@ echo -e "${GREEN}✓${NC} 配置有效"
 echo ""
 
 # 后台启动 Nomad
+mkdir -p "$E2B_STORAGE_PATH/logs"
 nohup nomad agent -config="$CONFIG_FILE" \
-    > /mnt/sdb/e2b-storage/logs/nomad.log 2>&1 &
+    > "$E2B_STORAGE_PATH/logs/nomad.log" 2>&1 &
 
 NOMAD_PID=$!
 echo "Nomad PID: $NOMAD_PID"
@@ -83,7 +93,7 @@ done
 
 if [ $COUNT -eq $MAX_WAIT ]; then
     echo -e " ${RED}✗ 超时${NC}"
-    echo "查看日志: tail -f /mnt/sdb/e2b-storage/logs/nomad.log"
+    echo "查看日志: tail -f $E2B_STORAGE_PATH/logs/nomad.log"
     exit 1
 fi
 
@@ -99,11 +109,11 @@ echo ""
 echo -e "${GREEN}✓ Nomad 已启动${NC}"
 echo ""
 echo "访问地址: http://localhost:4646"
-echo "日志文件: /mnt/sdb/e2b-storage/logs/nomad.log"
+echo "日志文件: $E2B_STORAGE_PATH/logs/nomad.log"
 echo ""
 echo "常用命令:"
 echo "  nomad node status           # 查看节点"
 echo "  nomad job status            # 查看作业"
-echo "  tail -f /mnt/sdb/e2b-storage/logs/nomad.log  # 查看日志"
+echo "  tail -f $E2B_STORAGE_PATH/logs/nomad.log  # 查看日志"
 echo "  pkill nomad                 # 停止服务"
 echo ""

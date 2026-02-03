@@ -1,6 +1,17 @@
 #!/bin/bash
 set -e
 
+# 加载环境变量
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PCLOUD_HOME="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+if [ -f "$PCLOUD_HOME/config/env.sh" ]; then
+    source "$PCLOUD_HOME/config/env.sh"
+fi
+
+# 设置默认值
+PCLOUD_HOME="${PCLOUD_HOME:-/home/primihub/pcloud}"
+E2B_STORAGE_PATH="${E2B_STORAGE_PATH:-$PCLOUD_HOME/../e2b-storage}"
+
 # 颜色定义
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -20,7 +31,7 @@ if ! command -v consul &> /dev/null; then
 fi
 
 # 数据目录
-DATA_DIR="/mnt/sdb/e2b-storage/consul-local"
+DATA_DIR="$E2B_STORAGE_PATH/consul-local"
 mkdir -p "$DATA_DIR"
 
 # 检查是否已经在运行
@@ -40,7 +51,7 @@ nohup consul agent \
     -data-dir="$DATA_DIR" \
     -bind=127.0.0.1 \
     -client=0.0.0.0 \
-    > /mnt/sdb/e2b-storage/logs/consul.log 2>&1 &
+    > "$E2B_STORAGE_PATH/logs/consul.log" 2>&1 &
 
 CONSUL_PID=$!
 echo "Consul PID: $CONSUL_PID"
@@ -72,8 +83,8 @@ echo ""
 echo -e "${GREEN}✓ Consul 已启动${NC}"
 echo ""
 echo "访问地址: http://localhost:8500"
-echo "日志文件: /mnt/sdb/e2b-storage/logs/consul.log"
+echo "日志文件: $E2B_STORAGE_PATH/logs/consul.log"
 echo ""
-echo "查看日志: tail -f /mnt/sdb/e2b-storage/logs/consul.log"
+echo "查看日志: tail -f $E2B_STORAGE_PATH/logs/consul.log"
 echo "停止服务: pkill consul"
 echo ""

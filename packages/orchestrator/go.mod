@@ -1,6 +1,6 @@
 module github.com/e2b-dev/infra/packages/orchestrator
 
-go 1.22.2
+go 1.25.4
 
 replace (
 	github.com/e2b-dev/infra/packages/clickhouse v0.0.0 => ../clickhouse
@@ -12,18 +12,11 @@ replace github.com/garyburd/redigo => github.com/gomodule/redigo v1.9.2
 
 require (
 	cloud.google.com/go/storage v1.58.0
-	connectrpc.com/connect v1.19.1
 	github.com/Merovius/nbd v0.0.0-20240812113926-fd65a54c9949
-	github.com/aws/aws-sdk-go-v2/config v1.32.6
-	github.com/aws/aws-sdk-go-v2/credentials v1.19.6
-	github.com/aws/aws-sdk-go-v2/service/ecr v1.54.4
 	github.com/bits-and-blooms/bitset v1.24.4
-	github.com/bmatcuk/doublestar/v4 v4.9.1
 	github.com/caarlos0/env/v11 v11.3.1
 	github.com/containernetworking/plugins v1.9.0
-	github.com/containers/storage v1.59.1
 	github.com/coreos/go-iptables v0.8.0
-	github.com/dustin/go-humanize v1.0.1
 	github.com/e2b-dev/infra/packages/clickhouse v0.0.0
 	github.com/e2b-dev/infra/packages/shared v0.0.0
 	github.com/edsrzf/mmap-go v1.0.0
@@ -31,7 +24,6 @@ require (
 	github.com/gin-contrib/size v1.0.2
 	github.com/gin-gonic/gin v1.11.0
 	github.com/go-openapi/strfmt v0.23.0
-	github.com/google/go-containerregistry v0.20.7
 	github.com/google/nftables v0.3.0
 	github.com/google/uuid v1.6.0
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.3
@@ -71,6 +63,7 @@ require (
 	cloud.google.com/go/compute/metadata v0.9.0 // indirect
 	cloud.google.com/go/iam v1.5.3 // indirect
 	cloud.google.com/go/longrunning v0.7.0 // indirect
+	connectrpc.com/connect v1.19.1 // indirect
 	github.com/ClickHouse/ch-go v0.69.0 // indirect
 	github.com/ClickHouse/clickhouse-go/v2 v2.42.0 // indirect
 	github.com/DataDog/datadog-go/v5 v5.2.0 // indirect
@@ -80,12 +73,15 @@ require (
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.41.0 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.4 // indirect
+	github.com/aws/aws-sdk-go-v2/config v1.32.6 // indirect
+	github.com/aws/aws-sdk-go-v2/credentials v1.19.6 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.16 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.20.17 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.16 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.16 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.4 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.16 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ecr v1.54.4 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.4 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.9.7 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.16 // indirect
@@ -96,6 +92,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.35.12 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.41.5 // indirect
 	github.com/aws/smithy-go v1.24.0 // indirect
+	github.com/bmatcuk/doublestar/v4 v4.10.0 // indirect
 	github.com/bytedance/gopkg v0.1.3 // indirect
 	github.com/bytedance/sonic v1.14.2 // indirect
 	github.com/bytedance/sonic/loader v0.4.0 // indirect
@@ -107,6 +104,7 @@ require (
 	github.com/containerd/fifo v1.0.0 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.18.1 // indirect
 	github.com/containernetworking/cni v1.3.0 // indirect
+	github.com/containers/storage v1.59.1 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dchest/uniuri v1.2.0 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
@@ -146,6 +144,7 @@ require (
 	github.com/goccy/go-yaml v1.19.0 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
+	github.com/google/go-containerregistry v0.20.7 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.7 // indirect
 	github.com/googleapis/gax-go/v2 v2.16.0 // indirect
@@ -247,6 +246,7 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20251202230838-ff82c1b0f217 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251202230838-ff82c1b0f217 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
+	gotest.tools/v3 v3.5.2 // indirect
 )
 
 replace cloud.google.com/go/storage => cloud.google.com/go/storage v1.30.0

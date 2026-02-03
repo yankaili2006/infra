@@ -1,9 +1,9 @@
-# E2B VM 创建故障排查指南
+# 基础设施故障排查指南
 
-本文档记录了在本地开发环境中调试 E2B Firecracker VM 创建过程中遇到的所有问题及其解决方案。
+本文档记录了在 pcloud 基础设施中遇到的各种问题及其解决方案。
 
-**最后更新:** 2025-12-20
-**验证环境:** 本地开发 (/home/primihub/pcloud)
+**最后更新:** 2026-01-02
+**验证环境:** pcloud 生产环境 (/root/pcloud)
 **验证状态:** ✅ 核心组件 100% 可用
 
 ---
@@ -838,17 +838,198 @@ nomad alloc logs -tail -n 100 $ORCH_ALLOC orchestrator
 
 ---
 
+## 11. Headscale/Tailscale SSL证书过期问题
+
+### 症状
+- Tailscale客户端报错: "Unable to connect to the Tailscale coordination server"
+- 日志显示: "TLS cert verificication for 'headscale.primihub.com' failed: x509: certificate has expired"
+- Headscale日志显示大量: "ERR user msg: node not found code=404"
+
+### 根本原因
+1. SSL证书过期: `headscale.primihub.com`证书在2025年9月8日过期
+2. Nginx配置错误: 证书文件路径不正确，实际使用`api.primihub.com`的过期证书
+3. 用户配置问题: Tailscale配置中的operator用户"primihub"在系统中不存在
+
+### 解决方案
+```bash
+# 1. 复制证书到正确位置
+mkdir -p /etc/nginx/sslkey/
+cp /root/pcloud/service/nginx-proxy/ssl/headscale.primihub.com.* /etc/nginx/sslkey/
+
+# 2. 创建nginx配置
+cat > /etc/nginx/conf.d/headscale.conf << 'EOF'
+server {
+    listen 80;
+    server_name headscale.primihub.com;
+    return 301 https://$host$request_uri;
+}
+server {
+    listen 443 ssl;
+    server_name headscale.primihub.com;
+    ssl_certificate /etc/nginx/sslkey/headscale.primihub.com.pem;
+    ssl_certificate_key /etc/nginx/sslkey/headscale.primihub.com.key;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    location ^~ / {
+        proxy_pass http://118.190.39.100:37080;
+        proxy_set_header Host $host; 
+        proxy_set_header X-Real-IP $remote_addr; 
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; 
+        proxy_set_header REMOTE-HOST $remote_addr; 
+        proxy_set_header Upgrade $http_upgrade; 
+        proxy_set_header Connection "upgrade"; 
+        proxy_set_header X-Forwarded-Proto $scheme; 
+        proxy_http_version 1.1; 
+        add_header X-Cache $upstream_cache_status; 
+        add_header Strict-Transport-Security "max-age=31536000"; 
+        add_header Cache-Control no-cache; 
+    }
+}
+EOF
+
+# 3. 创建系统用户
+useradd -m -s /bin/bash primihub
+
+# 4. 重启服务
+nginx -t && nginx -s reload
+docker restart headscale
+systemctl restart tailscaled
+```
+
+### 详细文档
+完整解决方案记录在: `/root/pcloud/docs/HEADSCALE_TAILSCALE_CERTIFICATE_ISSUE_20260102.md`
+
 ## 附录 C: 相关文档链接
 
 - E2B 官方文档: https://e2b.dev/docs
 - Firecracker 官方文档: https://github.com/firecracker-microvm/firecracker/tree/main/docs
 - Nomad 官方文档: https://developer.hashicorp.com/nomad/docs
 - 内核编译指南: https://github.com/firecracker-microvm/firecracker/blob/main/docs/rootfs-and-kernel-setup.md
-- CLAUDE.md: `/home/primihub/pcloud/infra/CLAUDE.md`
+- Headscale/Tailscale证书问题: `/root/pcloud/docs/HEADSCALE_TAILSCALE_CERTIFICATE_ISSUE_20260102.md`
+- CLAUDE.md: `/root/pcloud/infra/CLAUDE.md`
 
 ---
 
-**文档维护者:** Claude Code
-**最后验证:** 2025-12-20
-**验证环境:** 本地开发环境
+## 12. 数据库迁移问题: env_secure 列缺失
+
+### 症状
+
+创建或恢复 sandbox 时，API 返回错误：
+
+```
+ERROR: column s.env_secure does not exist
+```
+
+或在 API 日志中看到类似错误：
+
+```
+pq: column "env_secure" does not exist
+```
+
+### 根本原因
+
+数据库迁移文件 `20250409113306_add_envd_secured_to_snapshot.sql` 没有被正确执行，导致 `snapshots` 表缺少 `env_secure` 列。
+
+**关键发现**:
+- ❌ **错误尝试**: 在 `postgres` 数据库的 `sandboxes` 表添加列（该表不存在）
+- ✅ **正确位置**: 在 `e2b` 数据库的 `snapshots` 表添加列
+
+### 解决方案
+
+#### 1. 连接到正确的数据库
+
+```bash
+# 连接到 e2b 数据库（不是 postgres 数据库）
+PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d e2b
+```
+
+#### 2. 添加缺失的列
+
+```sql
+-- 在 e2b 数据库中执行
+ALTER TABLE snapshots
+ADD COLUMN IF NOT EXISTS env_secure boolean NOT NULL DEFAULT false;
+```
+
+#### 3. 验证修复
+
+```sql
+-- 检查列是否存在
+SELECT column_name, data_type, column_default
+FROM information_schema.columns
+WHERE table_name = 'snapshots' AND column_name = 'env_secure';
+
+-- 预期输出:
+--  column_name | data_type | column_default
+-- -------------+-----------+----------------
+--  env_secure  | boolean   | false
+```
+
+### 迁移文件参考
+
+**文件位置**: `infra/packages/db/migrations/20250409113306_add_envd_secured_to_snapshot.sql`
+
+**内容**:
+```sql
+-- +goose Up
+ALTER TABLE snapshots ADD COLUMN env_secure boolean NOT NULL DEFAULT false;
+
+-- +goose Down
+ALTER TABLE snapshots DROP COLUMN env_secure;
+```
+
+### 预防措施
+
+#### 运行所有迁移
+
+如果遇到类似数据库结构不完整的问题，运行完整的迁移：
+
+```bash
+cd /home/primihub/pcloud/infra/packages/db
+
+# 设置数据库连接
+export POSTGRES_CONNECTION_STRING="postgresql://postgres:postgres@127.0.0.1:5432/e2b?sslmode=disable"
+
+# 运行迁移
+make migrate
+```
+
+#### 检查数据库版本
+
+```sql
+-- 查看 goose 迁移状态
+SELECT * FROM goose_db_version ORDER BY id DESC LIMIT 10;
+```
+
+### 关键教训
+
+⭐⭐⭐ **确认目标数据库**
+- E2B 使用独立的 `e2b` 数据库，不是默认的 `postgres` 数据库
+- 运行 SQL 前先确认 `\c e2b` 或使用 `-d e2b` 参数
+
+⭐⭐ **确认目标表**
+- `env_secure` 列在 `snapshots` 表，不是 `sandboxes` 表
+- 使用 `\dt` 查看所有表，`\d snapshots` 查看表结构
+
+⭐ **检查迁移状态**
+- 如果某些功能不工作，可能是迁移没有完全执行
+- 检查 `goose_db_version` 表确认迁移历史
+
+### 快速诊断命令
+
+```bash
+# 检查 e2b 数据库中的表
+PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d e2b -c "\dt"
+
+# 检查 snapshots 表结构
+PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d e2b -c "\d snapshots"
+
+# 检查迁移历史
+PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d e2b -c "SELECT version_id, is_applied FROM goose_db_version ORDER BY id DESC LIMIT 5"
+```
+
+---
+
+**文档维护者:** opencode AI助手
+**最后验证:** 2026-01-15
+**验证环境:** pcloud 生产环境
 **核心组件状态:** ✅ 100% 可用

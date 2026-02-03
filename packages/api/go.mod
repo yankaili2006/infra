@@ -48,6 +48,7 @@ require (
 	github.com/jackc/pgx/v5 v5.7.5
 	github.com/jellydator/ttlcache/v3 v3.4.0
 	github.com/launchdarkly/go-sdk-common/v3 v3.4.0
+	github.com/lib/pq v1.10.9
 	github.com/oapi-codegen/gin-middleware v1.0.2
 	github.com/oapi-codegen/runtime v1.1.2
 	github.com/orcaman/concurrent-map/v2 v2.0.1
@@ -154,7 +155,6 @@ require (
 	github.com/launchdarkly/go-server-sdk-evaluation/v3 v3.0.1 // indirect
 	github.com/launchdarkly/go-server-sdk/v7 v7.14.4 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
-	github.com/lib/pq v1.10.9 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/magiconair/properties v1.8.10 // indirect
 	github.com/mailru/easyjson v0.9.0 // indirect

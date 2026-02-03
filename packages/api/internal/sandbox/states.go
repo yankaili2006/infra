@@ -17,7 +17,7 @@ const (
 )
 
 const (
-	SandboxTimeoutDefault = time.Second * 15
+	SandboxTimeoutDefault = time.Second * 300  // Changed from 15s to 300s (5 minutes) for better stability
 	// Should we auto pause the instance by default instead of killing it
 	AutoPauseDefault = false
 )

@@ -134,6 +134,14 @@ func (a *APIStore) PostSandboxes(c *gin.Context) {
 	if body.Timeout != nil {
 		timeout = time.Duration(*body.Timeout) * time.Second
 
+		// Warn if timeout is too short (less than 60 seconds)
+		if timeout < 60*time.Second {
+			logger.L().Warn(ctx, "Timeout is very short and may cause VM initialization failures",
+				zap.Duration("timeout", timeout),
+				zap.String("sandbox_id", sandboxID),
+				zap.String("recommendation", "Use at least 60 seconds for reliable VM initialization"))
+		}
+
 		if timeout > time.Duration(teamInfo.Limits.MaxLengthHours)*time.Hour {
 			a.sendAPIStoreError(c, http.StatusBadRequest, fmt.Sprintf("Timeout cannot be greater than %d hours", teamInfo.Limits.MaxLengthHours))
 

@@ -11,6 +11,16 @@ NC='\033[0m'
 
 # 脚本目录
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PCLOUD_HOME="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+
+# 加载环境变量配置
+if [ -f "$PCLOUD_HOME/config/env.sh" ]; then
+    source "$PCLOUD_HOME/config/env.sh"
+fi
+
+# 设置默认值
+PCLOUD_HOME="${PCLOUD_HOME:-/home/primihub/pcloud}"
+E2B_STORAGE_PATH="${E2B_STORAGE_PATH:-$PCLOUD_HOME/../e2b-storage}"
 
 echo ""
 echo "=========================================="
@@ -22,6 +32,7 @@ echo "  1. 基础设施 (PostgreSQL, Redis, ClickHouse, Grafana)"
 echo "  2. Consul (服务发现)"
 echo "  3. Nomad (作业调度)"
 echo "  4. 部署 Nomad Jobs (API, Orchestrator, etc.)"
+echo "  5. 前端应用 (Fragments, Surf)"
 echo ""
 
 read -p "是否继续? [y/N] " -n 1 -r
@@ -34,10 +45,60 @@ fi
 echo ""
 START_TIME=$(date +%s)
 
+# 步骤 0: 系统初始化检查
+echo ""
+echo "=========================================="
+echo -e "${BLUE}步骤 0/5: 系统初始化检查${NC}"
+echo "=========================================="
+echo ""
+
+# 检查 KVM 模块
+if ! lsmod | grep -q "^kvm "; then
+    echo -e "${YELLOW}⚠${NC} KVM 模块未加载，正在加载..."
+    sudo modprobe kvm
+    if grep -q 'vmx' /proc/cpuinfo; then
+        sudo modprobe kvm_intel
+    elif grep -q 'svm' /proc/cpuinfo; then
+        sudo modprobe kvm_amd
+    fi
+fi
+echo -e "${GREEN}✓${NC} KVM 模块已加载"
+
+# 检查 NBD 模块
+if ! lsmod | grep -q "^nbd "; then
+    echo -e "${YELLOW}⚠${NC} NBD 模块未加载，正在加载..."
+    sudo modprobe nbd max_part=8 nbds_max=64
+fi
+echo -e "${GREEN}✓${NC} NBD 模块已加载"
+
+# 检查用户是否在 kvm 组
+if ! groups | grep -q kvm; then
+    echo -e "${YELLOW}⚠${NC} 当前用户不在 kvm 组，正在添加..."
+    sudo usermod -aG kvm $USER
+    echo -e "${GREEN}✓${NC} 用户已添加到 kvm 组"
+    echo -e "${YELLOW}⚠${NC} 请重新登录或运行 'newgrp kvm' 以使组权限生效"
+fi
+
+# 检查 /dev/kvm 权限
+if [ ! -r /dev/kvm ] || [ ! -w /dev/kvm ]; then
+    echo -e "${YELLOW}⚠${NC} /dev/kvm 权限不足，正在设置..."
+    sudo chmod 666 /dev/kvm
+fi
+echo -e "${GREEN}✓${NC} /dev/kvm 权限正常"
+
+# 检查 IP 转发
+if [ "$(sysctl -n net.ipv4.ip_forward)" != "1" ]; then
+    echo -e "${YELLOW}⚠${NC} IP 转发未启用，正在启用..."
+    sudo sysctl -w net.ipv4.ip_forward=1 > /dev/null
+fi
+echo -e "${GREEN}✓${NC} IP 转发已启用"
+
+echo ""
+
 # 步骤 1: 启动基础设施
 echo ""
 echo "=========================================="
-echo -e "${BLUE}步骤 1/4: 启动基础设施${NC}"
+echo -e "${BLUE}步骤 1/5: 启动基础设施${NC}"
 echo "=========================================="
 echo ""
 
@@ -84,7 +145,7 @@ sleep 5
 # 步骤 4: 部署 Jobs
 echo ""
 echo "=========================================="
-echo -e "${BLUE}步骤 4/4: 部署 Nomad Jobs${NC}"
+echo -e "${BLUE}步骤 4/5: 部署 Nomad Jobs${NC}"
 echo "=========================================="
 echo ""
 
@@ -93,6 +154,20 @@ if bash "$SCRIPT_DIR/deploy-all-jobs.sh"; then
 else
     echo -e "${YELLOW}⚠ Jobs 部署可能存在问题${NC}"
     echo "请检查 nomad job status 查看详情"
+fi
+
+# 步骤 5: 启动前端应用
+echo ""
+echo "=========================================="
+echo -e "${BLUE}步骤 5/5: 启动前端应用${NC}"
+echo "=========================================="
+echo ""
+
+if bash "$SCRIPT_DIR/start-frontend-apps.sh"; then
+    echo -e "${GREEN}✓ 前端应用已启动${NC}"
+else
+    echo -e "${YELLOW}⚠ 前端应用启动可能存在问题${NC}"
+    echo "请检查日志文件查看详情"
 fi
 
 # 计算耗时
@@ -112,7 +187,9 @@ echo ""
 echo "服务访问地址:"
 echo "  主页 (Nginx):  http://localhost:80"
 echo "  API:          http://localhost:3000"
+echo "  Fragments:    http://localhost:3001"
 echo "  Client Proxy: http://localhost:3002"
+echo "  Surf:         http://localhost:3003"
 echo "  Grafana:      http://localhost:53000"
 echo "  Nomad UI:     http://localhost:4646"
 echo "  Consul UI:    http://localhost:8500"
@@ -129,9 +206,11 @@ echo "  docker compose ps             # Docker 服务"
 echo ""
 
 echo "查看日志:"
-echo "  tail -f /mnt/sdb/e2b-storage/logs/*.log   # Nomad/Consul 日志"
-echo "  nomad alloc logs -f <id>      # Job 日志"
-echo "  docker compose logs -f        # Docker 日志"
+echo "  tail -f $E2B_STORAGE_PATH/logs/*.log      # 所有日志"
+echo "  tail -f $E2B_STORAGE_PATH/logs/fragments.log  # Fragments 日志"
+echo "  tail -f $E2B_STORAGE_PATH/logs/surf.log       # Surf 日志"
+echo "  nomad alloc logs -f <id>                  # Job 日志"
+echo "  docker compose logs -f                    # Docker 日志"
 echo ""
 
 echo "停止服务:"

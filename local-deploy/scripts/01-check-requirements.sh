@@ -77,9 +77,19 @@ if [ -e /dev/kvm ]; then
         echo -e "${GREEN}✓${NC} 当前用户已在 kvm 组"
     else
         echo -e "${YELLOW}⚠${NC} 当前用户不在 kvm 组"
-        echo "  运行: sudo usermod -aG kvm $USER"
-        echo "  然后重新登录"
-        WARNINGS=$((WARNINGS + 1))
+        echo "  正在尝试将用户添加到 kvm 组..."
+
+        # 尝试自动添加用户到 kvm 组
+        if sudo usermod -aG kvm $USER 2>/dev/null; then
+            echo -e "${GREEN}✓${NC} 已成功将用户 $USER 添加到 kvm 组"
+            echo -e "${YELLOW}⚠${NC} 请重新登录以使组权限生效"
+            WARNINGS=$((WARNINGS + 1))
+        else
+            echo -e "${RED}✗${NC} 无法自动添加用户到 kvm 组"
+            echo "  请手动运行: sudo usermod -aG kvm $USER"
+            echo "  然后重新登录"
+            WARNINGS=$((WARNINGS + 1))
+        fi
     fi
 else
     echo -e "${RED}✗${NC} /dev/kvm 不存在"

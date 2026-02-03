@@ -37,6 +37,7 @@ func NewSandbox(
 	domain *string,
 	network *types.SandboxNetworkConfig,
 	trafficAccessToken *string,
+	envdURL string,
 ) Sandbox {
 	return Sandbox{
 		SandboxID:  sandboxID,
@@ -67,6 +68,7 @@ func NewSandbox(
 		State:               StateRunning,
 		BaseTemplateID:      baseTemplateID,
 		Network:             network,
+		EnvdURL:             envdURL,
 	}
 }
 
@@ -98,6 +100,7 @@ type Sandbox struct {
 	ClusterID           uuid.UUID                   `json:"clusterID"`
 	AutoPause           bool                        `json:"autoPause"`
 	Network             *types.SandboxNetworkConfig `json:"network"`
+	EnvdURL             string                      `json:"envdURL,omitempty"`
 
 	State State `json:"state"`
 }
@@ -112,6 +115,7 @@ func (s Sandbox) ToAPISandbox() *api.Sandbox {
 		EnvdAccessToken:    s.EnvdAccessToken,
 		TrafficAccessToken: s.TrafficAccessToken,
 		Domain:             s.Domain,
+		EnvdURL:            &s.EnvdURL,
 	}
 }
 

@@ -536,6 +536,9 @@ type Sandbox struct {
 
 	// TrafficAccessToken Token required for accessing sandbox via proxy.
 	TrafficAccessToken *string `json:"trafficAccessToken"`
+
+	// EnvdURL URL to access the envd service from the host
+	EnvdURL *string `json:"envdURL,omitempty"`
 }
 
 // SandboxDetail defines model for SandboxDetail.
@@ -555,6 +558,9 @@ type SandboxDetail struct {
 
 	// Domain Base domain where the sandbox traffic is accessible
 	Domain *string `json:"domain"`
+
+	// EnvdURL URL to access the envd service from the host
+	EnvdURL *string `json:"envdURL,omitempty"`
 
 	// EndAt Time when the sandbox will expire
 	EndAt time.Time `json:"endAt"`

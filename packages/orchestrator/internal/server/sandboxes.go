@@ -211,9 +211,32 @@ func (s *Server) Create(ctx context.Context, req *orchestrator.SandboxCreateRequ
 		},
 	)
 
-	return &orchestrator.SandboxCreateResponse{
-		ClientId: s.info.ClientId,
-	}, nil
+	envdURL := ""
+	if sbx.Slot != nil {
+		envdURL = sbx.Slot.GetEnvdURL()
+		logger.L().Info(ctx, "Returning sandbox with envd URL",
+			zap.String("sandbox_id", sbx.Runtime.SandboxID),
+			zap.String("envd_url", envdURL),
+		)
+	} else {
+		logger.L().Warn(ctx, "Sandbox Slot is nil, cannot get envd URL",
+			zap.String("sandbox_id", sbx.Runtime.SandboxID),
+		)
+	}
+
+	response := &orchestrator.SandboxCreateResponse{
+		ClientId: envdURL, // EXPERIMENT: Put envd_url in client_id field
+		EnvdUrl:  envdURL,
+	}
+
+	// DEBUG: Log the response before returning
+	logger.L().Info(ctx, "About to return gRPC response",
+		zap.String("sandbox_id", sbx.Runtime.SandboxID),
+		zap.String("response_client_id", response.ClientId),
+		zap.String("response_envd_url", response.EnvdUrl),
+	)
+
+	return response, nil
 }
 
 func (s *Server) Update(ctx context.Context, req *orchestrator.SandboxUpdateRequest) (*emptypb.Empty, error) {

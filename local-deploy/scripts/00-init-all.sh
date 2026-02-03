@@ -12,6 +12,18 @@ NC='\033[0m'
 # 脚本目录
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+PCLOUD_HOME="$(cd "$PROJECT_ROOT/.." && pwd)"
+
+# 加载环境变量配置
+if [ -f "$PCLOUD_HOME/config/env.sh" ]; then
+    echo "加载环境变量配置: $PCLOUD_HOME/config/env.sh"
+    source "$PCLOUD_HOME/config/env.sh"
+    echo ""
+fi
+
+# 设置默认值
+PCLOUD_HOME="${PCLOUD_HOME:-/home/primihub/pcloud}"
+E2B_STORAGE_PATH="${E2B_STORAGE_PATH:-$PCLOUD_HOME/../e2b-storage}"
 
 echo ""
 echo "=========================================="

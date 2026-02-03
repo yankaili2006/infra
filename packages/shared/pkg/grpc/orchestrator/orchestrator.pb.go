@@ -477,6 +477,7 @@ type SandboxCreateResponse struct {
 	unknownFields protoimpl.UnknownFields
 
 	ClientId string `protobuf:"bytes,1,opt,name=client_id,json=clientId,proto3" json:"client_id,omitempty"`
+	EnvdUrl  string `protobuf:"bytes,3,opt,name=envd_url,json=envdUrl,proto3" json:"envd_url,omitempty"`
 }
 
 func (x *SandboxCreateResponse) Reset() {
@@ -514,6 +515,13 @@ func (*SandboxCreateResponse) Descriptor() ([]byte, []int) {
 func (x *SandboxCreateResponse) GetClientId() string {
 	if x != nil {
 		return x.ClientId
+	}
+	return ""
+}
+
+func (x *SandboxCreateResponse) GetEnvdUrl() string {
+	if x != nil {
+		return x.EnvdUrl
 	}
 	return ""
 }

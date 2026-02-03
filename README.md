@@ -7,6 +7,32 @@
 
 This repository contains the infrastructure that powers the E2B platform.
 
+## 🎨 Fragments Web UI
+
+This repository now includes **Fragments**, an open-source web interface for interacting with E2B sandboxes. Fragments provides a user-friendly UI for executing code, building applications, and managing sandboxes visually.
+
+**Features:**
+- 🔸 Interactive code execution in Python, JavaScript, and more
+- 🔸 Support for Next.js, Vue.js, Streamlit, and Gradio frameworks
+- 🔸 Multiple LLM provider integrations (OpenAI, Anthropic, DeepSeek, etc.)
+- 🔸 Real-time code streaming and visualization
+- 🔸 Built-in code editor with syntax highlighting
+
+**Quick Start:**
+```bash
+# Start E2B infrastructure first
+cd infra/local-deploy
+./scripts/start-all.sh
+
+# Then start Fragments web UI
+cd infra/fragments
+./start-fragments.sh
+
+# Access at http://localhost:3001
+```
+
+For detailed documentation, see [fragments/README_INTEGRATION.md](./fragments/README_INTEGRATION.md).
+
 ## Self-hosting
 
 Read the [self-hosting guide](./self-host.md) to learn how to set up the infrastructure on your own. The infrastructure is deployed using Terraform.

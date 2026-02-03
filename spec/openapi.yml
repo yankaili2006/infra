@@ -412,6 +412,9 @@ components:
           type: string
           nullable: true
           description: Base domain where the sandbox traffic is accessible
+        envdURL:
+          type: string
+          description: URL to access the envd service from the host
         cpuCount:
           $ref: "#/components/schemas/CPUCount"
         memoryMB:

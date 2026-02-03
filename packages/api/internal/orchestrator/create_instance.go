@@ -186,6 +186,13 @@ func (o *Orchestrator) CreateSandbox(
 	}
 
 	sbxNetwork := buildNetworkConfig(network, allowInternetAccess, trafficAccessToken)
+
+	// Handle nil EnvdVersion - default to "0.2.0" if not set
+	envdVers := "0.2.0" // Default version
+	if build.EnvdVersion != nil {
+		envdVers = *build.EnvdVersion
+	}
+
 	sbxRequest := &orchestrator.SandboxCreateRequest{
 		Sandbox: &orchestrator.SandboxConfig{
 			BaseTemplateId:      baseTemplateID,
@@ -197,7 +204,7 @@ func (o *Orchestrator) CreateSandbox(
 			ExecutionId:         executionID,
 			KernelVersion:       build.KernelVersion,
 			FirecrackerVersion:  build.FirecrackerVersion,
-			EnvdVersion:         *build.EnvdVersion,
+			EnvdVersion:         envdVers,
 			Metadata:            metadata,
 			EnvVars:             envVars,
 			EnvdAccessToken:     envdAuthToken,
@@ -230,7 +237,7 @@ func (o *Orchestrator) CreateSandbox(
 	nodeClusterID := utils.WithClusterFallback(team.ClusterID)
 	clusterNodes := o.GetClusterNodes(nodeClusterID)
 
-	node, err = placement.PlaceSandbox(ctx, o.placementAlgorithm, clusterNodes, node, sbxRequest, machineinfo.FromDB(build))
+	node, grpcResp, err := placement.PlaceSandbox(ctx, o.placementAlgorithm, clusterNodes, node, sbxRequest, machineinfo.FromDB(build))
 	if err != nil {
 		telemetry.ReportError(ctx, "failed to place sandbox", err)
 
@@ -239,6 +246,24 @@ func (o *Orchestrator) CreateSandbox(
 			ClientMsg: "Failed to place sandbox",
 			Err:       fmt.Errorf("failed to place sandbox: %w", err),
 		}
+	}
+
+	// DEBUG: Log the gRPC response envd_url
+	logger.L().Info(ctx, "Received gRPC response from orchestrator",
+		zap.String("sandbox_id", sandboxID),
+		zap.String("envd_url_from_grpc", grpcResp.GetEnvdUrl()),
+		zap.String("client_id_from_grpc", grpcResp.GetClientId()),
+	)
+
+	// WORKAROUND: EnvdUrl field is not being transmitted correctly via gRPC
+	// Use ClientId field as a temporary workaround since it transmits correctly
+	envdURL := grpcResp.GetEnvdUrl()
+	if envdURL == "" && grpcResp.GetClientId() != "" {
+		envdURL = grpcResp.GetClientId()
+		logger.L().Info(ctx, "Using ClientId as envd_url workaround",
+			zap.String("sandbox_id", sandboxID),
+			zap.String("envd_url", envdURL),
+		)
 	}
 
 	// The sandbox was created successfully
@@ -298,6 +323,7 @@ func (o *Orchestrator) CreateSandbox(
 		sbxDomain,
 		network,
 		trafficAccessToken,
+		envdURL, // Use the workaround variable instead of grpcResp.GetEnvdUrl()
 	)
 
 	err = o.sandboxStore.Add(ctx, sbx, true)

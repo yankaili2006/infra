@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"runtime"
+	"strings"
 
 	"github.com/coreos/go-iptables/iptables"
 	"github.com/vishvananda/netlink"
@@ -191,6 +192,18 @@ func (s *Slot) CreateNetwork(ctx context.Context) error {
 		return fmt.Errorf("error setting network namespace to %s: %w", hostNS.String(), err)
 	}
 
+	// Add host IP to loopback interface so TCP proxy can bind to it
+	hostLo, err := netlink.LinkByName(loopbackInterface)
+	if err != nil {
+		return fmt.Errorf("error finding host loopback interface: %w", err)
+	}
+	err = netlink.AddrAdd(hostLo, &netlink.Addr{
+		IPNet: s.HostNet(),
+	})
+	if err != nil && !strings.Contains(err.Error(), "file exists") {
+		return fmt.Errorf("error adding host IP to loopback: %w", err)
+	}
+
 	// Add routing from host to FC namespace
 	err = netlink.RouteAdd(&netlink.Route{
 		Gw:  s.VpeerIP(),
@@ -227,11 +240,38 @@ func (s *Slot) CreateNetwork(ctx context.Context) error {
 		return fmt.Errorf("error creating HTTP redirect rule to sandbox hyperloop proxy server: %w", err)
 	}
 
+	// Setup socat network bridge for envd access
+	logger.L().Info(ctx, "Setting up socat network bridge for envd access",
+		zap.String("namespace", s.NamespaceID()),
+		zap.String("vpeer_ip", s.VpeerIP().String()),
+		zap.String("host_ip", s.HostIP().String()),
+	)
+
+	s.socatBridge = NewSocatBridge(s.NamespaceID(), s.VpeerIP(), s.HostIP())
+	err = s.socatBridge.Setup(ctx)
+	if err != nil {
+		logger.L().Warn(ctx, "Failed to setup socat bridge, envd may not be accessible from host", zap.Error(err))
+		// Don't fail network creation if socat setup fails - network is still functional
+		// Socat is only for convenience access to envd from host
+	} else {
+		logger.L().Info(ctx, "Socat bridge setup successful",
+			zap.String("access_url", s.socatBridge.GetAccessURL()),
+		)
+	}
+
 	return nil
 }
 
 func (s *Slot) RemoveNetwork() error {
 	var errs []error
+
+	// Teardown socat bridge first
+	if s.socatBridge != nil {
+		ctx := context.Background() // Create a background context for cleanup
+		if err := s.socatBridge.Teardown(ctx); err != nil {
+			errs = append(errs, fmt.Errorf("error tearing down socat bridge: %w", err))
+		}
+	}
 
 	err := s.CloseFirewall()
 	if err != nil {

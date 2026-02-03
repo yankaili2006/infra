@@ -72,6 +72,7 @@ message SandboxCreateRequest {
 
 message SandboxCreateResponse {
   string client_id = 1;
+  string envd_url = 3;  // Changed from 2 to 3 to test if field number is the issue
 }
 
 message SandboxUpdateRequest {

@@ -11,11 +11,18 @@ const (
 
 	FirecrackerBinaryName = "firecracker"
 
-	envsDisk     = "/mnt/disks/fc-envs/v1"
 	buildDirName = "builds"
+)
+
+const (
+	// envsDisk is the base path for Firecracker VM environments
+	// This is where tmpfs mounts are created for sandbox rootfs symlinks
+	envsDisk = "/mnt/data1/fc-envs/v1"
 
 	SandboxRootfsFile = "rootfs.ext4"
+)
 
+var (
 	entropyBytesSize    int64 = 1024 // 1 KB
 	entropyRefillTime   int64 = 100
 	entropyOneTimeBurst int64 = 0

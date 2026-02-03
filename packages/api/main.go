@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"syscall"
@@ -89,8 +90,22 @@ func NewGinServer(ctx context.Context, config cfg.Config, tel *telemetry.Client,
 	)
 
 	corsConfig := cors.DefaultConfig()
-	// Allow all origins
-	corsConfig.AllowAllOrigins = true
+	// Configure allowed origins from environment variable for security
+	// Default to localhost for local development if not set
+	allowedOrigins := env.GetEnv("CORS_ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,http://127.0.0.1:3001")
+	if allowedOrigins == "*" {
+		// Only allow wildcard in explicit configuration (not recommended for production)
+		corsConfig.AllowAllOrigins = true
+		l.Warn(ctx, "CORS configured to allow all origins - not recommended for production")
+	} else {
+		// Parse comma-separated origins
+		origins := strings.Split(allowedOrigins, ",")
+		for i, origin := range origins {
+			origins[i] = strings.TrimSpace(origin)
+		}
+		corsConfig.AllowOrigins = origins
+		l.Info(ctx, "CORS configured with allowed origins", zap.Strings("origins", corsConfig.AllowOrigins))
+	}
 	corsConfig.AllowHeaders = []string{
 		// Default headers
 		"Origin",

@@ -2,7 +2,7 @@ job "api" {
   datacenters = ["dc1"]
   type        = "service"
   priority    = 90
-  node_pool   = "local-dev"  # 匹配节点的 pool
+  node_pool = "local-dev"  # 匹配节点的 pool
 
   # 本地开发只需要1个实例
   group "api-service" {
@@ -67,17 +67,17 @@ job "api" {
       driver = "raw_exec"
 
       config {
-        command = "/home/primihub/pcloud/infra/packages/api/bin/api"
+        command = "/mnt/data1/pcloud/infra/local-deploy/scripts/start-api.sh"
         args     = ["--port", "3000"]
       }
 
       # 环境变量
       env {
         NODE_ID     = "${node.unique.id}"
-        ENVIRONMENT = "development"
+        ENVIRONMENT = "local"
 
         # 数据库连接
-        POSTGRES_CONNECTION_STRING   = "postgres://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable&connect_timeout=30"
+        POSTGRES_CONNECTION_STRING   = "postgres://postgres:postgres@127.0.0.1:5432/e2b?sslmode=disable&connect_timeout=30"
         CLICKHOUSE_CONNECTION_STRING = "clickhouse://clickhouse:clickhouse@127.0.0.1:9000/clickhouse"
 
         # Redis
@@ -95,10 +95,11 @@ job "api" {
 
         # 本地开发使用静态服务发现
         ORCHESTRATOR_PORT = "5008"
+        ORCHESTRATOR_URL = "localhost:5008"
 
-        # 本地cluster配置
-        LOCAL_CLUSTER_ENDPOINT = "127.0.0.1:3001"
-        LOCAL_CLUSTER_TOKEN    = "--edge-secret--"
+        # 本地cluster配置 - 禁用以避免连接错误
+        LOCAL_CLUSTER_ENDPOINT = ""
+        LOCAL_CLUSTER_TOKEN    = ""
 
         # 禁用外部服务
         POSTHOG_API_KEY               = ""
@@ -108,7 +109,7 @@ job "api" {
 
         # 测试用密钥
         ADMIN_TOKEN                    = "local-admin-token"
-        SANDBOX_ACCESS_TOKEN_HASH_SEED = "--sandbox-access-token-hash-seed--"
+        SANDBOX_ACCESS_TOKEN_HASH_SEED = "local-sandbox-seed-key-for-development"
         SUPABASE_JWT_SECRETS           = "test-jwt-secret"
 
         # 模板bucket（本地不需要但代码可能需要）
@@ -117,9 +118,7 @@ job "api" {
         # 存储配置（使用本地文件系统）
         STORAGE_PROVIDER            = "Local"
         ARTIFACTS_REGISTRY_PROVIDER = "Local"
-        LOCAL_TEMPLATE_STORAGE_BASE_PATH = "/mnt/sdb/e2b-storage/e2b-template-storage"
-        BUILD_CACHE_BUCKET_NAME    = "/mnt/sdb/e2b-storage/e2b-build-cache"
-        TEMPLATE_CACHE_DIR         = "/mnt/sdb/e2b-storage/e2b-template-cache"
+        # 存储路径由 start-api.sh 脚本从环境变量加载
 
         # 默认版本
         DEFAULT_KERNEL_VERSION      = "vmlinux-6.1.158"
@@ -127,8 +126,11 @@ job "api" {
       }
 
       resources {
-        cpu    = 1000  # 1 CPU
-        memory = 2048  # 2GB
+        cpu    = 2000  # 2 CPU cores (优化后)
+        memory = 2048  # 2GB RAM
+
+        # 允许内存突发到 4GB
+        memory_max = 4096
       }
     }
   }

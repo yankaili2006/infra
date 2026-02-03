@@ -3,6 +3,7 @@ package orchestrator
 import (
 	"context"
 	"fmt"
+	"os"
 	"sync"
 	"time"
 
@@ -72,7 +73,7 @@ func (o *Orchestrator) syncNodes(ctx context.Context, store *sandbox.Store, skip
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		o.syncLocalDiscoveredNodes(spanCtx, nomadNodes)
+		o.syncLocalDiscoveredNodes(spanCtx, &nomadNodes)
 	}()
 
 	wg.Add(1)
@@ -115,7 +116,7 @@ func (o *Orchestrator) syncNodes(ctx context.Context, store *sandbox.Store, skip
 	}
 }
 
-func (o *Orchestrator) syncLocalDiscoveredNodes(ctx context.Context, discovered []nodemanager.NomadServiceDiscovery) {
+func (o *Orchestrator) syncLocalDiscoveredNodes(ctx context.Context, discovered *[]nodemanager.NomadServiceDiscovery) {
 	// Connect local nodes that are not in the list, yet
 	connectLocalSpanCtx, connectLocalSpan := tracer.Start(ctx, "keep-in-sync-connect-local-nodes")
 	defer connectLocalSpan.End()
@@ -123,7 +124,30 @@ func (o *Orchestrator) syncLocalDiscoveredNodes(ctx context.Context, discovered 
 	var wg sync.WaitGroup
 	defer wg.Wait()
 
-	for _, n := range discovered {
+	// PATCH: In local development mode, if no nodes are discovered via Nomad,
+	// manually add the local orchestrator node
+	if len(*discovered) == 0 {
+		orchestratorURL := os.Getenv("ORCHESTRATOR_URL")
+		if orchestratorURL != "" {
+			// Get the actual Nomad node short ID from NODE_ID environment variable
+			// NODE_ID is the full UUID, short ID is first 8 characters
+			nodeID := os.Getenv("NODE_ID")
+			nodeShortID := "local-node-001" // Fallback default
+			if nodeID != "" && len(nodeID) >= 8 {
+				nodeShortID = nodeID[:8]
+			}
+			logger.L().Info(ctx, "No nodes discovered via Nomad, manually adding local orchestrator",
+				zap.String("url", orchestratorURL),
+				zap.String("node_short_id", nodeShortID))
+			*discovered = append(*discovered, nodemanager.NomadServiceDiscovery{
+				NomadNodeShortID:    nodeShortID,
+				OrchestratorAddress: orchestratorURL,
+				IPAddress:           "127.0.0.1",
+			})
+		}
+	}
+
+	for _, n := range *discovered {
 		// If the node is not in the list, connect to it
 		if o.GetNodeByNomadShortID(n.NomadNodeShortID) == nil {
 			wg.Add(1)

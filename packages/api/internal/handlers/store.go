@@ -252,7 +252,11 @@ func (a *APIStore) GetTeamFromAPIKey(ctx context.Context, apiKey string) (*types
 		}
 	}
 
+	// DEBUG: Log the hashed API key
+	logger.L().Info(ctx, "DEBUG: Hashed API key", zap.String("hash", hashedApiKey), zap.String("raw_key_prefix", apiKey[:10]))
+
 	team, err := a.authCache.GetOrSet(ctx, hashedApiKey, func(ctx context.Context, key string) (*types.Team, error) {
+		logger.L().Info(ctx, "DEBUG: Calling GetTeamAuth with hash", zap.String("hash", key))
 		return dbapi.GetTeamAuth(ctx, a.sqlcDB, key)
 	})
 	if err != nil {

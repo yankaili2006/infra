@@ -4,7 +4,7 @@
 set -e
 
 # 配置
-BACKUP_DIR="/mnt/data1/pcloud/infra/local-deploy/db-backups"
+BACKUP_DIR="${PCLOUD_HOME}/infra/local-deploy/db-backups"
 DB_NAME="e2b"
 DB_USER="postgres"
 DB_HOST="127.0.0.1"

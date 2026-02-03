@@ -133,6 +133,7 @@ func (p *Pool) Populate(ctx context.Context) {
 
 func (p *Pool) Get(ctx context.Context, network *orchestrator.SandboxNetworkConfig) (*Slot, error) {
 	var slot *Slot
+	var isReused bool
 
 	select {
 	case <-p.done:
@@ -143,6 +144,7 @@ func (p *Pool) Get(ctx context.Context, network *orchestrator.SandboxNetworkConf
 		telemetry.ReportEvent(ctx, "reused network slot")
 
 		slot = s
+		isReused = true
 	default:
 		select {
 		case <-p.done:
@@ -155,6 +157,21 @@ func (p *Pool) Get(ctx context.Context, network *orchestrator.SandboxNetworkConf
 			telemetry.ReportEvent(ctx, "new network slot")
 
 			slot = s
+			isReused = false
+		}
+	}
+
+	// For reused slots, we need to reinitialize the socat bridge
+	// because it was torn down when the slot was returned to the pool
+	if isReused {
+		if err := slot.ReinitializeSocatBridge(ctx); err != nil {
+			logger.L().Warn(ctx, "failed to reinitialize socat bridge for reused slot, envd may not be accessible",
+				zap.Error(err),
+				zap.Int("slot_index", slot.Idx),
+			)
+			// Don't fail - the slot is still usable, just envd access from host may not work
+		} else {
+			telemetry.ReportEvent(ctx, "reinitialized socat bridge for reused slot")
 		}
 	}
 

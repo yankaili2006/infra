@@ -13,10 +13,12 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
+	"go.uber.org/zap"
 	netutils "k8s.io/utils/net"
 
 	"github.com/e2b-dev/infra/packages/shared/pkg/env"
 	"github.com/e2b-dev/infra/packages/shared/pkg/grpc/orchestrator"
+	"github.com/e2b-dev/infra/packages/shared/pkg/logger"
 )
 
 var tracer = otel.Tracer("github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/network")
@@ -78,6 +80,9 @@ type Slot struct {
 	hostCIDR string
 
 	hyperloopIP, hyperloopPort string
+
+	// SocatBridge manages network bridging between host and VM guest
+	socatBridge *SocatBridge
 }
 
 func NewSlot(key string, idx int, config Config) (*Slot, error) {
@@ -236,6 +241,25 @@ func (s *Slot) InitializeFirewall() error {
 	return nil
 }
 
+// GetEnvdURL returns the URL to access the VM's envd service from the host
+func (s *Slot) GetEnvdURL() string {
+	if s.socatBridge == nil {
+		logger.L().Warn(context.Background(), "socatBridge is nil when getting envd URL",
+			zap.String("namespace_id", s.NamespaceID()),
+			zap.String("host_ip", s.HostIPString()),
+			zap.Int("slot_idx", s.Idx),
+		)
+		return ""
+	}
+	url := s.socatBridge.GetAccessURL()
+	logger.L().Info(context.Background(), "Got envd URL from socatBridge",
+		zap.String("namespace_id", s.NamespaceID()),
+		zap.String("envd_url", url),
+		zap.Int("slot_idx", s.Idx),
+	)
+	return url
+}
+
 func (s *Slot) CloseFirewall() error {
 	if s.Firewall == nil {
 		return nil
@@ -318,6 +342,31 @@ func (s *Slot) ResetInternet(ctx context.Context) error {
 	})
 	if err != nil {
 		return fmt.Errorf("failed execution in network namespace '%s': %w", s.NamespaceID(), err)
+	}
+
+	return nil
+}
+
+// ReinitializeSocatBridge re-establishes the socat bridge for a reused slot.
+// This is necessary because when a slot is returned to the pool, the socat bridge
+// is torn down, but when the slot is reused, we need to set it up again.
+func (s *Slot) ReinitializeSocatBridge(ctx context.Context) error {
+	_, span := tracer.Start(ctx, "slot-socat-reinitialize", trace.WithAttributes(
+		attribute.String("namespace_id", s.NamespaceID()),
+		attribute.String("host_ip", s.HostIPString()),
+		attribute.String("vpeer_ip", s.VpeerIP().String()),
+	))
+	defer span.End()
+
+	// Teardown existing bridge if any (cleanup stale state)
+	if s.socatBridge != nil {
+		_ = s.socatBridge.Teardown(ctx) // Ignore errors during cleanup
+	}
+
+	// Create and setup new socat bridge
+	s.socatBridge = NewSocatBridge(s.NamespaceID(), s.VpeerIP(), s.HostIP())
+	if err := s.socatBridge.Setup(ctx); err != nil {
+		return fmt.Errorf("failed to reinitialize socat bridge: %w", err)
 	}
 
 	return nil
