@@ -1,0 +1,19 @@
+# Allow primihub user to run orchestrator as root without password
+# This is required because Firecracker needs root privileges
+
+# Preserve environment variables
+Defaults:primihub env_keep += "NODE_ID ENVIRONMENT STORAGE_PROVIDER ARTIFACTS_REGISTRY_PROVIDER"
+Defaults:primihub env_keep += "TEMPLATE_BUCKET_NAME ALLOW_SANDBOX_INTERNET"
+Defaults:primihub env_keep += "POSTGRES_CONNECTION_STRING REDIS_URL CLICKHOUSE_CONNECTION_STRING"
+Defaults:primihub env_keep += "OTEL_COLLECTOR_GRPC_ENDPOINT LOGS_COLLECTOR_ADDRESS"
+Defaults:primihub env_keep += "GRPC_PORT PROXY_PORT ORCHESTRATOR_SERVICES ENVD_TIMEOUT"
+Defaults:primihub env_keep += "LAUNCH_DARKLY_API_KEY GIN_MODE ORCHESTRATOR_HUGE_PAGES HUGE_PAGES"
+Defaults:primihub env_keep += "PCLOUD_HOME E2B_STORAGE_PATH"
+Defaults:primihub env_keep += "FIRECRACKER_VERSIONS_DIR HOST_ENVD_PATH HOST_KERNELS_DIR"
+Defaults:primihub env_keep += "ORCHESTRATOR_BASE_PATH SANDBOX_DIR LOCAL_TEMPLATE_STORAGE_BASE_PATH"
+Defaults:primihub env_keep += "BUILD_CACHE_BUCKET_NAME SANDBOX_CACHE_DIR SNAPSHOT_CACHE_DIR"
+Defaults:primihub env_keep += "TEMPLATE_CACHE_DIR SHARED_CHUNK_CACHE_PATH ORCHESTRATOR_LOCK_PATH"
+
+# Allow running orchestrator as root
+primihub ALL=(root) NOPASSWD: {{PCLOUD_HOME}}/infra/packages/orchestrator/bin/orchestrator
+primihub ALL=(root) NOPASSWD: {{PCLOUD_HOME}}/infra/local-deploy/scripts/start-orchestrator.sh
