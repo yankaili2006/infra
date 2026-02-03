@@ -1,0 +1,30 @@
+{
+  "name": "fragments-test-suite",
+  "version": "1.0.0",
+  "description": "Comprehensive testing suite for Fragments Web UI",
+  "scripts": {
+    "test": "./run-all-tests.sh",
+    "test:api": "node api-test-client.js",
+    "test:e2b": "node e2b-integration-test.js",
+    "test:browser": "node playwright-test.js",
+    "test:verbose": "./run-all-tests.sh --verbose",
+    "test:skip-browser": "./run-all-tests.sh --skip-browser",
+    "test:screenshot": "./run-all-tests.sh --screenshot",
+    "install:playwright": "npm install playwright && npx playwright install chromium"
+  },
+  "keywords": [
+    "e2b",
+    "fragments",
+    "testing",
+    "playwright",
+    "integration-tests"
+  ],
+  "author": "E2B Team",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "playwright": "^1.40.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
