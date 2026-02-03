@@ -1,6 +1,6 @@
 services:
   clickhouse:
-    image: "clickhouse:25.4.5.24"
+    image: "swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/clickhouse:25.4.5.24"
     environment:
       CLICKHOUSE_DB: clickhouse
       CLICKHOUSE_USER: clickhouse
@@ -13,7 +13,8 @@ services:
       - clickhouse:/var/lib/clickhouse
 
   grafana:
-    image: grafana/grafana:12.0.0
+    image: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/grafana/grafana:12.0.0
+    pull_policy: never
     volumes:
       - ./grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml
     environment:
@@ -21,12 +22,11 @@ services:
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
       - GF_AUTH_DISABLE_LOGIN_FORM=true
       - GF_FEATURE_TOGGLES_ENABLE=traceqlEditor metricsSummary
-      - GF_INSTALL_PLUGINS=https://storage.googleapis.com/integration-artifacts/grafana-exploretraces-app/grafana-exploretraces-app-latest.zip;grafana-traces-app
     ports:
       - "53000:3000"
 
   loki:
-    image: grafana/loki:3.4.1
+    image: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/grafana/loki:3.4.1
     command: -config.file=/etc/loki/local-config.yaml
     ports:
       - "3100:3100"
@@ -38,7 +38,7 @@ services:
       retries: 12  # try for 2 minutes
 
   memcached:
-    image: memcached:1.6.38
+    image: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/memcached:1.6.38
     container_name: memcached
     ports:
       - "11211:11211"
@@ -47,13 +47,14 @@ services:
       - MEMCACHED_THREADS=4 # Number of threads to use
 
   mimir:
-    image: grafana/mimir:2.17.1
+    image: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/grafana/mimir:2.17.1
     command: -config.file=/etc/mimir/mimir.yaml
     volumes:
       - ./mimir.yaml:/etc/mimir/mimir.yaml
 
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.135.0
+    image: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/otel/opentelemetry-collector-contrib:0.135.0
+    pull_policy: never
     volumes:
       - ./otel-collector.yaml:/etc/otelcol-contrib/config.yaml
     ports:
@@ -61,7 +62,7 @@ services:
       - "4318:4318" # OTLP HTTP receiver"
 
   postgres:
-    image: postgres:17.4
+    image: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/postgres:17.4
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -73,12 +74,12 @@ services:
       - postgres:/var/lib/postgresql/17/docker
 
   redis:
-    image: redis:7.4.2
+    image: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/redis:7.4.2
     ports:
       - "6379:6379"
 
   tempo:
-    image: grafana/tempo:2.8.2
+    image: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/grafana/tempo:2.8.2
     command: [ "-config.file=/etc/tempo.yaml" ]
     volumes:
       - ./tempo.yaml:/etc/tempo.yaml
@@ -92,7 +93,7 @@ services:
   # Tempo runs as user 10001, and docker compose creates the volume as root.
   # As such, we need to chown the volume in order for Tempo to start correctly.
   tempo-init:
-    image: bash
+    image: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/bash
     user: root
     entrypoint:
       - "chown"
@@ -101,17 +102,18 @@ services:
     volumes:
       - tempo:/var/tempo
 
-  vector:
-    image: timberio/vector:0.34.X-alpine
-    depends_on:
-      - loki
-    environment:
-      VECTOR_CONFIG: "/etc/vector.toml"
-      VECTOR_LOG: "warn"
-    ports:
-      - "30006:30006"
-    volumes:
-      - ./vector.toml:/etc/vector.toml
+  # vector:
+  #   image: timberio/vector:0.34.2-alpine
+  #   pull_policy: never
+  #   depends_on:
+  #     - loki
+  #   environment:
+  #     VECTOR_CONFIG: "/etc/vector.toml"
+  #     VECTOR_LOG: "warn"
+  #   ports:
+  #     - "30006:30006"
+  #   volumes:
+  #     - ./vector.toml:/etc/vector.toml
 
   nginx:
     image: nginx:alpine

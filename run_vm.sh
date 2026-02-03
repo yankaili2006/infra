@@ -6,11 +6,22 @@ set -e
 # 描述: 禁用遥测和无用服务，降低 CPU 占用
 # ==========================================
 
+# 加载环境变量配置
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PCLOUD_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+if [ -f "$PCLOUD_ROOT/config/env.sh" ]; then
+    source "$PCLOUD_ROOT/config/env.sh"
+fi
+
+# 设置路径（使用环境变量或默认值）
+PCLOUD_HOME="${PCLOUD_HOME:-/home/primihub/pcloud}"
+E2B_STORAGE_PATH="${E2B_STORAGE_PATH:-$PCLOUD_HOME/../e2b-storage}"
+
 # 1. 配置路径和变量
-export ORCHESTRATOR_BIN="/mnt/sdb/pcloud/infra/packages/orchestrator/bin/orchestrator"
+export ORCHESTRATOR_BIN="$PCLOUD_HOME/infra/packages/orchestrator/bin/orchestrator"
 export NODE_ID="ebf61fd6-cd3f-6909-2922-4bd50a6beeff"
 export LOG_FILE="/tmp/orchestrator_full.log"
-export WORK_DIR="/mnt/sdb/pcloud/infra"
+export WORK_DIR="$PCLOUD_HOME/infra"
 
 # 颜色定义
 GREEN='\033[0;32m'
@@ -43,12 +54,12 @@ export CLICKHOUSE_CONNECTION_STRING='clickhouse://clickhouse:clickhouse@127.0.0.
 export REDIS_URL='127.0.0.1:6379'
 export STORAGE_PROVIDER='Local'
 export ARTIFACTS_REGISTRY_PROVIDER='Local'
-export LOCAL_TEMPLATE_STORAGE_BASE_PATH='/mnt/sdb/e2b-storage/e2b-template-storage'
-export ORCHESTRATOR_BASE_PATH='/mnt/sdb/e2b-storage/e2b-orchestrator'
-export TEMPLATE_STORAGE_BASE_PATH='/mnt/sdb/e2b-storage/e2b-template-storage'
+export LOCAL_TEMPLATE_STORAGE_BASE_PATH="$E2B_STORAGE_PATH/e2b-template-storage"
+export ORCHESTRATOR_BASE_PATH="$E2B_STORAGE_PATH/e2b-orchestrator"
+export TEMPLATE_STORAGE_BASE_PATH="$E2B_STORAGE_PATH/e2b-template-storage"
 export TEMPLATE_BUCKET_NAME='skip'
-export BUILD_CACHE_BUCKET_NAME='/mnt/sdb/e2b-storage/e2b-build-cache'
-export TEMPLATE_CACHE_DIR='/mnt/sdb/e2b-storage/e2b-template-cache'
+export BUILD_CACHE_BUCKET_NAME="$E2B_STORAGE_PATH/e2b-build-cache"
+export TEMPLATE_CACHE_DIR="$E2B_STORAGE_PATH/e2b-template-cache"
 
 # --- 关键优化：禁用 OpenTelemetry 和其他上报 ---
 export OTEL_SDK_DISABLED=true

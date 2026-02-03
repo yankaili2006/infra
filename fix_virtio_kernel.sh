@@ -8,6 +8,15 @@
 
 set -e
 
+# 加载环境变量
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PCLOUD_HOME="${PCLOUD_HOME:-$(cd "$SCRIPT_DIR/.." && pwd)}"
+
+# 尝试加载环境配置
+if [ -f "$PCLOUD_HOME/config/env.sh" ]; then
+    source "$PCLOUD_HOME/config/env.sh"
+fi
+
 # 颜色定义
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -21,7 +30,7 @@ echo -e "${BLUE}=========================================${NC}"
 echo
 
 # 配置
-KERNEL_DIR="/home/primihub/pcloud/infra/packages/fc-kernels"
+KERNEL_DIR="${HOST_KERNELS_DIR:-$PCLOUD_HOME/infra/packages/fc-kernels}"
 TEMP_DIR="/tmp/fc-kernel-fix"
 PROXY="http://127.0.0.1:7890"
 
@@ -237,5 +246,5 @@ cd /
 rm -rf "$TEMP_DIR"
 
 echo -e "${YELLOW}提示：${NC}如果仍然遇到问题，请查看:"
-echo "  /home/primihub/pcloud/infra/FIRECRACKER_VIRTIO_EINVAL_DIAGNOSIS.md"
+echo "  $PCLOUD_HOME/infra/FIRECRACKER_VIRTIO_EINVAL_DIAGNOSIS.md"
 echo

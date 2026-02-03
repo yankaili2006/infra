@@ -38,7 +38,7 @@ job "client-proxy" {
       driver = "raw_exec"
 
       config {
-        command = "/home/primihub/pcloud/infra/packages/client-proxy/bin/client-proxy"
+        command = "${HOME}/pcloud/infra/packages/client-proxy/bin/client-proxy"
         args = [
           "--port", "3001",
         ]

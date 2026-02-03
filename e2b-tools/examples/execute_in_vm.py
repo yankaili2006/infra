@@ -46,7 +46,7 @@ class E2BClient:
                 timeout=30
             )
 
-            if resp.status_code == 200:
+            if resp.status_code in [200, 201]:
                 data = resp.json()
                 sandbox_id = data.get("sandboxID")
                 print(f"✅ VM创建成功! ID: {sandbox_id}")

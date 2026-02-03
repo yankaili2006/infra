@@ -2,7 +2,7 @@
 # 单节点本地开发环境
 
 # 数据目录
-data_dir = "/mnt/sdb/e2b-storage/nomad-local"
+data_dir = "/home/primihub/e2b-storage/nomad-local"
 
 # 日志配置
 log_level = "INFO"
@@ -23,6 +23,11 @@ client {
 
   # 节点池
   node_pool = "local-dev"
+
+  # 环境变量（对所有任务可用）
+  options = {
+    "env.PCLOUD_HOME" = "/home/primihub/pcloud"
+  }
 
   # 预留资源（根据本机资源调整）
   reserved {

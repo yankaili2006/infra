@@ -59,19 +59,19 @@ job "orchestrator" {
         FIRECRACKER_VERSIONS_DIR = "/home/primihub/pcloud/infra/packages/fc-versions/builds"
         HOST_ENVD_PATH           = "/home/primihub/pcloud/infra/packages/envd/bin/envd"
         HOST_KERNELS_DIR         = "/home/primihub/pcloud/infra/packages/fc-kernels"
-        ORCHESTRATOR_BASE_PATH   = "/home/primihub/e2b-storage/e2b-orchestrator"
-        SANDBOX_DIR              = "/home/primihub/e2b-storage/e2b-fc-vm"
+        ORCHESTRATOR_BASE_PATH   = "/mnt/data1/e2b-storage/e2b-orchestrator"
+        SANDBOX_DIR              = "/mnt/data1/e2b-storage/e2b-fc-vm"
 
         # 缓存目录
-        LOCAL_TEMPLATE_STORAGE_BASE_PATH = "/home/primihub/e2b-storage/e2b-template-storage"
-        BUILD_CACHE_BUCKET_NAME          = "/home/primihub/e2b-storage/e2b-build-cache"
-        SANDBOX_CACHE_DIR                = "/home/primihub/e2b-storage/e2b-sandbox-cache"
-        SNAPSHOT_CACHE_DIR               = "/home/primihub/e2b-storage/e2b-snapshot-cache"
-        TEMPLATE_CACHE_DIR               = "/home/primihub/e2b-storage/e2b-template-cache"
-        SHARED_CHUNK_CACHE_PATH          = "/home/primihub/e2b-storage/e2b-chunk-cache"
+        LOCAL_TEMPLATE_STORAGE_BASE_PATH = "/mnt/data1/e2b-storage/e2b-template-storage"
+        BUILD_CACHE_BUCKET_NAME          = "/mnt/data1/e2b-storage/e2b-build-cache"
+        SANDBOX_CACHE_DIR                = "/mnt/data1/e2b-storage/e2b-sandbox-cache"
+        SNAPSHOT_CACHE_DIR               = "/mnt/data1/e2b-storage/e2b-snapshot-cache"
+        TEMPLATE_CACHE_DIR               = "/mnt/data1/e2b-storage/e2b-template-cache"
+        SHARED_CHUNK_CACHE_PATH          = "/mnt/data1/e2b-storage/e2b-chunk-cache"
 
         # 锁文件
-        ORCHESTRATOR_LOCK_PATH = "/home/primihub/e2b-storage/e2b-orchestrator.lock"
+        ORCHESTRATOR_LOCK_PATH = "/mnt/data1/e2b-storage/e2b-orchestrator.lock"
 
         # 网络配置
         ALLOW_SANDBOX_INTERNET = "true"

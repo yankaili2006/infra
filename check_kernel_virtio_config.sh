@@ -6,6 +6,18 @@
 
 set -e
 
+# 加载环境变量
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PCLOUD_HOME="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# 尝试加载环境配置
+if [ -f "$PCLOUD_HOME/config/env.sh" ]; then
+    source "$PCLOUD_HOME/config/env.sh"
+fi
+
+# 设置默认值
+PCLOUD_HOME="${PCLOUD_HOME:-/home/primihub/pcloud}"
+
 echo "========================================="
 echo "Firecracker Virtio MMIO 配置检查工具"
 echo "========================================="
@@ -17,7 +29,7 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-KERNEL_DIR="/home/primihub/pcloud/infra/packages/fc-kernels"
+KERNEL_DIR="$PCLOUD_HOME/infra/packages/fc-kernels"
 
 echo "1. 检查可用的内核文件..."
 echo "-----------------------------------"

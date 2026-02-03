@@ -6,11 +6,22 @@ set -e
 # 包含: NBD清理检测, CPU优化, 路径修复
 # ==========================================
 
-export ORCHESTRATOR_BIN="/mnt/sdb/pcloud/infra/packages/orchestrator/bin/orchestrator"
+# 加载环境变量配置
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PCLOUD_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+if [ -f "$PCLOUD_ROOT/config/env.sh" ]; then
+    source "$PCLOUD_ROOT/config/env.sh"
+fi
+
+# 设置路径（使用环境变量或默认值）
+PCLOUD_HOME="${PCLOUD_HOME:-/home/primihub/pcloud}"
+E2B_STORAGE_PATH="${E2B_STORAGE_PATH:-$PCLOUD_HOME/../e2b-storage}"
+
+export ORCHESTRATOR_BIN="$PCLOUD_HOME/infra/packages/orchestrator/bin/orchestrator"
 export NODE_ID="ebf61fd6-cd3f-6909-2922-4bd50a6beeff"
 export LOG_FILE="/tmp/orchestrator_optimized.log"
-export WORK_DIR="/mnt/sdb/pcloud/infra"
-export STORAGE_DIR="/mnt/sdb/e2b-storage/e2b-template-storage"
+export WORK_DIR="$PCLOUD_HOME/infra"
+export STORAGE_DIR="$E2B_STORAGE_PATH/e2b-template-storage"
 export BUILD_ID="9ac9c8b9-9b8b-476c-9238-8266af308c32"
 export TEMPLATE_ID="base-template-000-0000-0000-000000000001"
 
@@ -37,12 +48,12 @@ export CLICKHOUSE_CONNECTION_STRING='clickhouse://clickhouse:clickhouse@127.0.0.
 export REDIS_URL='127.0.0.1:6379'
 export STORAGE_PROVIDER='Local'
 export ARTIFACTS_REGISTRY_PROVIDER='Local'
-export LOCAL_TEMPLATE_STORAGE_BASE_PATH='/mnt/sdb/e2b-storage/e2b-template-storage'
-export ORCHESTRATOR_BASE_PATH='/mnt/sdb/e2b-storage/e2b-orchestrator'
-export TEMPLATE_STORAGE_BASE_PATH='/mnt/sdb/e2b-storage/e2b-template-storage'
+export LOCAL_TEMPLATE_STORAGE_BASE_PATH="$E2B_STORAGE_PATH/e2b-template-storage"
+export ORCHESTRATOR_BASE_PATH="$E2B_STORAGE_PATH/e2b-orchestrator"
+export TEMPLATE_STORAGE_BASE_PATH="$E2B_STORAGE_PATH/e2b-template-storage"
 export TEMPLATE_BUCKET_NAME='skip'
-export BUILD_CACHE_BUCKET_NAME='/mnt/sdb/e2b-storage/e2b-build-cache'
-export TEMPLATE_CACHE_DIR='/mnt/sdb/e2b-storage/e2b-template-cache'
+export BUILD_CACHE_BUCKET_NAME="$E2B_STORAGE_PATH/e2b-build-cache"
+export TEMPLATE_CACHE_DIR="$E2B_STORAGE_PATH/e2b-template-cache"
 
 # CPU 优化 (OTel Blackhole)
 export OTEL_COLLECTOR_GRPC_ENDPOINT="127.0.0.1:9999"

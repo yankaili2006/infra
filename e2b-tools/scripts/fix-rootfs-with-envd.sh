@@ -3,10 +3,20 @@
 
 set -e
 
+# Load environment variables
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PCLOUD_HOME="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+if [ -f "$PCLOUD_HOME/config/env.sh" ]; then
+    source "$PCLOUD_HOME/config/env.sh"
+fi
+
+PCLOUD_HOME="${PCLOUD_HOME:-/home/primihub/pcloud}"
+E2B_STORAGE_PATH="${E2B_STORAGE_PATH:-$PCLOUD_HOME/../e2b-storage}"
+
 BUILD_ID="9ac9c8b9-9b8b-476c-9238-8266af308c32"
 CACHE_ID="074f8a4c-3ecf-4fe7-9f36-34d56e52accf"
-ROOTFS="/home/primihub/e2b-storage/e2b-template-cache/${BUILD_ID}/cache/${CACHE_ID}/rootfs.ext4"
-ENVD_BIN="/home/primihub/pcloud/infra/packages/envd/bin/envd"
+ROOTFS="$E2B_STORAGE_PATH/e2b-template-cache/${BUILD_ID}/cache/${CACHE_ID}/rootfs.ext4"
+ENVD_BIN="$PCLOUD_HOME/infra/packages/envd/bin/envd"
 
 echo "=== Mounting rootfs ==="
 echo "Primihub@2022." | sudo -S mkdir -p /mnt/rootfs

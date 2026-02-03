@@ -44,7 +44,13 @@ func (m *NoopMemory) Start(context.Context, string) error {
 }
 
 func (m *NoopMemory) Stop() error {
-	return m.exit.SetSuccess()
+	// Stop() may be called multiple times (once in goroutine, once in cleanup)
+	// Ignore "already set" error to allow safe multiple calls
+	err := m.exit.SetSuccess()
+	if err != nil && err.Error() == "value already set" {
+		return nil
+	}
+	return err
 }
 
 func (m *NoopMemory) Ready() chan struct{} {

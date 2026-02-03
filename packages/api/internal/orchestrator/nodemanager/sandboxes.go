@@ -101,6 +101,7 @@ func (n *Node) GetSandboxes(ctx context.Context) ([]sandbox.Sandbox, error) {
 				n.SandboxDomain,
 				network,
 				networkTrafficAccessToken,
+				"", // envdURL not available when listing existing sandboxes
 			),
 		)
 	}

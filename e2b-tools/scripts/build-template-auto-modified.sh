@@ -8,6 +8,19 @@
 
 set -e
 
+# 加载环境变量
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PCLOUD_HOME="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+
+# 尝试加载环境配置
+if [ -f "$PCLOUD_HOME/config/env.sh" ]; then
+    source "$PCLOUD_HOME/config/env.sh"
+fi
+
+# 设置默认值
+PCLOUD_HOME="${PCLOUD_HOME:-/home/primihub/pcloud}"
+E2B_STORAGE_PATH="${E2B_STORAGE_PATH:-$PCLOUD_HOME/../e2b-storage}"
+
 # 颜色输出
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -19,7 +32,7 @@ TEMPLATE_ID="${1:-base-template-000-0000-0000-000000000001}"
 BUILD_ID="${2:-9ac9c8b9-9b8b-476c-9238-8266af308c32}"
 KERNEL_VERSION="vmlinux-6.1.158"
 FIRECRACKER_VERSION="v1.12.1_d990331"
-TEMPLATE_STORAGE_DIR="/home/primihub/e2b-storage/e2b-template-storage/${BUILD_ID}"
+TEMPLATE_STORAGE_DIR="$E2B_STORAGE_PATH/e2b-template-storage/${BUILD_ID}"
 
 # 日志函数
 log_info() {
@@ -41,7 +54,7 @@ check_and_start_infra() {
     # 检查 PostgreSQL
     if ! docker ps | grep -q postgres; then
         log_warn "PostgreSQL 未运行，启动基础设施服务..."
-        cd /home/primihub/pcloud/infra/local-deploy
+        cd "$PCLOUD_HOME/infra/local-deploy"
         bash scripts/start-infra.sh
         sleep 5
     else
@@ -70,7 +83,7 @@ configure_docker() {
 prepare_kernel() {
     log_info "准备内核文件..."
 
-    KERNEL_DIR="/home/primihub/pcloud/infra/packages/fc-kernels"
+    KERNEL_DIR="$PCLOUD_HOME/infra/packages/fc-kernels"
 
     if [ ! -f "$KERNEL_DIR/$KERNEL_VERSION" ]; then
         log_warn "创建内核符号链接..."

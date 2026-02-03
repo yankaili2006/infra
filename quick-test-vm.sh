@@ -3,12 +3,22 @@
 
 set -e
 
+# 加载环境变量配置
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PCLOUD_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+if [ -f "$PCLOUD_ROOT/config/env.sh" ]; then
+    source "$PCLOUD_ROOT/config/env.sh"
+fi
+
+# 设置路径（使用环境变量或默认值）
+PCLOUD_HOME="${PCLOUD_HOME:-/home/primihub/pcloud}"
+
 echo "=== Firecracker VM 快速测试 ==="
 echo
 
 # 1. 检查内核
 echo "1. 检查内核文件..."
-KERNEL="/home/primihub/pcloud/infra/packages/fc-kernels/vmlinux-5.10.223/vmlinux.bin"
+KERNEL="$PCLOUD_HOME/infra/packages/fc-kernels/vmlinux-5.10.223/vmlinux.bin"
 if [ ! -f "$KERNEL" ]; then
     echo "✗ 内核文件不存在: $KERNEL"
     exit 1
@@ -109,4 +119,4 @@ echo
 echo "如需查看详细日志："
 echo "  - Orchestrator: nomad alloc logs <alloc-id> orchestrator"
 echo "  - API: nomad alloc logs <alloc-id> api"
-echo "  - 或查看: tail -f /mnt/sdb/e2b-storage/logs/*.log"
+echo "  - 或查看: tail -f ${E2B_STORAGE_PATH:-$PCLOUD_HOME/../e2b-storage}/logs/*.log"

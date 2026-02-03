@@ -3,6 +3,15 @@
 
 set -e
 
+# Load environment variables
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PCLOUD_HOME="$(cd "$SCRIPT_DIR/.." && pwd)"
+if [ -f "$PCLOUD_HOME/config/env.sh" ]; then
+    source "$PCLOUD_HOME/config/env.sh"
+fi
+
+PCLOUD_HOME="${PCLOUD_HOME:-/home/primihub/pcloud}"
+
 echo "======================================================"
 echo "  配置Docker使用国内镜像源"
 echo "======================================================"
@@ -68,5 +77,5 @@ echo "  Docker镜像加速配置完成！"
 echo "======================================================"
 echo ""
 echo "现在可以运行构建脚本:"
-echo "  /home/primihub/pcloud/infra/rebuild-and-deploy.sh"
+echo "  $PCLOUD_HOME/infra/rebuild-and-deploy.sh"
 echo ""

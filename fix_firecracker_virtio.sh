@@ -6,6 +6,15 @@
 
 set -e
 
+# 加载环境变量配置
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PCLOUD_HOME="$(cd "$SCRIPT_DIR/.." && pwd)"
+if [ -f "$PCLOUD_HOME/config/env.sh" ]; then
+    source "$PCLOUD_HOME/config/env.sh"
+else
+    PCLOUD_HOME="${PCLOUD_HOME:-/home/primihub/pcloud}"
+fi
+
 # 颜色定义
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -17,7 +26,7 @@ NC='\033[0m' # No Color
 KERNEL_VERSION="5.10"
 FIRECRACKER_VERSION="v1.12.1"
 DOWNLOAD_URL="https://github.com/firecracker-microvm/firecracker/releases/download/${FIRECRACKER_VERSION}/vmlinux-${KERNEL_VERSION}.bin"
-TARGET_DIR="/home/primihub/pcloud/infra/packages/fc-kernels/vmlinux-5.10.223"
+TARGET_DIR="$PCLOUD_HOME/infra/packages/fc-kernels/vmlinux-5.10.223"
 TARGET_FILE="${TARGET_DIR}/vmlinux.bin"
 BACKUP_FILE="${TARGET_FILE}.backup-$(date +%Y%m%d-%H%M%S)"
 TMP_DOWNLOAD="/tmp/vmlinux-${KERNEL_VERSION}-official.bin"
@@ -155,7 +164,7 @@ echo "如果遇到问题，可以恢复备份："
 echo -e "${YELLOW}sudo cp $BACKUP_FILE $TARGET_FILE${NC}"
 echo -e "${YELLOW}nomad job restart orchestrator${NC}"
 echo
-echo "详细诊断报告: /home/primihub/pcloud/infra/FIRECRACKER_VIRTIO_EINVAL_DIAGNOSIS.md"
+echo "详细诊断报告: $PCLOUD_HOME/infra/FIRECRACKER_VIRTIO_EINVAL_DIAGNOSIS.md"
 echo
 
 # 清理临时文件（可选）

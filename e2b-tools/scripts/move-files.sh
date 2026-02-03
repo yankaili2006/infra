@@ -3,7 +3,15 @@
 
 set -e
 
-INFRA_DIR="/home/primihub/pcloud/infra"
+# Load environment variables
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PCLOUD_HOME="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+if [ -f "$PCLOUD_HOME/config/env.sh" ]; then
+    source "$PCLOUD_HOME/config/env.sh"
+fi
+
+PCLOUD_HOME="${PCLOUD_HOME:-/home/primihub/pcloud}"
+INFRA_DIR="$PCLOUD_HOME/infra"
 TMP_DIR="/tmp"
 
 echo "=== 开始整理E2B相关文件 ==="
