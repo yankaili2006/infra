@@ -41,6 +41,7 @@ export function SessionList({
   const [newTitle, setNewTitle] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
+  const [groupMode, setGroupMode] = useState<'date' | 'template' | 'model'>('date')
 
   // 加载会话列表
   const loadSessions = async () => {
@@ -100,7 +101,41 @@ export function SessionList({
     return Object.entries(groups).filter(([_, sessions]) => sessions.length > 0)
   }
 
-  const groupedSessions = groupSessionsByDate(filteredSessions)
+  // 按模板分组会话
+  const groupSessionsByTemplate = (sessions: ChatSession[]) => {
+    const groups: { [key: string]: ChatSession[] } = {}
+
+    sessions.forEach((session) => {
+      const template = session.template || 'auto'
+      if (!groups[template]) {
+        groups[template] = []
+      }
+      groups[template].push(session)
+    })
+
+    return Object.entries(groups).filter(([_, sessions]) => sessions.length > 0)
+  }
+
+  // 按模型分组会话
+  const groupSessionsByModel = (sessions: ChatSession[]) => {
+    const groups: { [key: string]: ChatSession[] } = {}
+
+    sessions.forEach((session) => {
+      const model = session.model || 'unknown'
+      if (!groups[model]) {
+        groups[model] = []
+      }
+      groups[model].push(session)
+    })
+
+    return Object.entries(groups).filter(([_, sessions]) => sessions.length > 0)
+  }
+
+  // 根据分组模式获取分组会话
+  const groupedSessions =
+    groupMode === 'date' ? groupSessionsByDate(filteredSessions) :
+    groupMode === 'template' ? groupSessionsByTemplate(filteredSessions) :
+    groupSessionsByModel(filteredSessions)
 
   // 切换分组折叠状态
   const toggleGroup = (groupName: string) => {
@@ -313,6 +348,36 @@ export function SessionList({
               <X className="h-4 w-4" />
             </Button>
           )}
+        </div>
+      </div>
+
+      {/* 分组模式选择器 */}
+      <div className="px-4 py-2 border-b">
+        <div className="flex gap-1 p-1 bg-muted rounded-lg">
+          <Button
+            variant={groupMode === 'date' ? 'default' : 'ghost'}
+            size="sm"
+            className="flex-1 text-xs"
+            onClick={() => setGroupMode('date')}
+          >
+            按时间
+          </Button>
+          <Button
+            variant={groupMode === 'template' ? 'default' : 'ghost'}
+            size="sm"
+            className="flex-1 text-xs"
+            onClick={() => setGroupMode('template')}
+          >
+            按模板
+          </Button>
+          <Button
+            variant={groupMode === 'model' ? 'default' : 'ghost'}
+            size="sm"
+            className="flex-1 text-xs"
+            onClick={() => setGroupMode('model')}
+          >
+            按模型
+          </Button>
         </div>
       </div>
 
