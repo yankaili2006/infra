@@ -4,7 +4,7 @@ import { getModelClient, LLMModel, LLMModelConfig } from '@/lib/models'
 import { toPrompt } from '@/lib/prompt'
 import ratelimit from '@/lib/ratelimit'
 import { fragmentSchema as schema } from '@/lib/schema'
-import { Templates } from '@/lib/templates'
+import templates, { Templates } from '@/lib/templates'
 import { selectTemplateFromMessages, getTemplateName } from '@/lib/template-selector'
 import { streamObject, LanguageModel, CoreMessage } from 'ai'
 
@@ -47,22 +47,26 @@ export async function POST(req: Request) {
   }
 
   // Auto-select template if not provided or if all templates passed (auto mode)
-  let template: string
+  let templateKey: string
+  let templateObj: Templates
   let autoSelected = false
 
   if (!requestedTemplate || requestedTemplate === '' || typeof requestedTemplate === 'object') {
-    template = selectTemplateFromMessages(messages)
+    templateKey = selectTemplateFromMessages(messages)
+    templateObj = (requestedTemplate as Templates) || templates
     autoSelected = true
-    console.log('🤖 Auto-selected template:', template, `(${getTemplateName(template)})`)
+    console.log('🤖 Auto-selected template:', templateKey, `(${getTemplateName(templateKey)})`)
   } else {
-    template = typeof requestedTemplate === 'string' ? requestedTemplate : requestedTemplate
-    console.log('📌 Using requested template:', template)
+    templateKey = requestedTemplate
+    // When a string key is provided, use all templates
+    templateObj = templates
+    console.log('📌 Using requested template:', templateKey)
   }
 
   console.log('userID', userID)
   console.log('teamID', teamID)
-  console.log('template', JSON.stringify(template, null, 2))
-  console.log('template type:', typeof template)
+  console.log('template', JSON.stringify(templateKey, null, 2))
+  console.log('template type:', typeof templateKey)
   console.log('auto-selected:', autoSelected)
   console.log('model', model)
   // console.log('config', config)
@@ -74,7 +78,7 @@ export async function POST(req: Request) {
     const stream = await streamObject({
       model: modelClient as LanguageModel,
       schema,
-      system: toPrompt(template),
+      system: toPrompt(templateObj),
       messages,
       maxRetries: 0, // do not retry on errors
       ...modelParams,

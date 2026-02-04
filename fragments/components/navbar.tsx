@@ -22,7 +22,7 @@ import {
   TwitterLogoIcon,
 } from '@radix-ui/react-icons'
 import { Session } from '@supabase/supabase-js'
-import { ArrowRight, LogOut, Trash, Undo } from 'lucide-react'
+import { Activity, ArrowRight, LogOut, Trash, Undo } from 'lucide-react'
 import Link from 'next/link'
 
 export function NavBar({
@@ -34,6 +34,7 @@ export function NavBar({
   onSocialClick,
   onUndo,
   canUndo,
+  children,
 }: {
   session: Session | null
   showLogin: () => void
@@ -43,6 +44,7 @@ export function NavBar({
   onSocialClick: (target: 'github' | 'x' | 'discord') => void
   onUndo: () => void
   canUndo: boolean
+  children?: React.ReactNode
 }) {
   return (
     <nav className="w-full flex bg-background py-4">
@@ -60,6 +62,19 @@ export function NavBar({
         </Link>
       </div>
       <div className="flex items-center gap-1 md:gap-4">
+        {children}
+        <TooltipProvider>
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
+              <Link href="/system">
+                <Button variant="ghost" size="icon">
+                  <Activity className="h-4 w-4 md:h-5 md:w-5" />
+                </Button>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent>系统状态</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
         <TooltipProvider>
           <Tooltip delayDuration={0}>
             <TooltipTrigger asChild>

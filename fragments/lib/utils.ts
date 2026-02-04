@@ -16,6 +16,22 @@ export function cn(...inputs: ClassValue[]) {
 export function isFileInArray(
   filePath: string,
   files: Array<{ file_path: string; file_content: string }>
+): boolean
+export function isFileInArray(
+  file: File,
+  files: File[]
+): boolean
+export function isFileInArray(
+  fileOrPath: string | File,
+  files: Array<{ file_path: string; file_content: string }> | File[]
 ): boolean {
-  return files.some((file) => file.file_path === filePath)
+  if (typeof fileOrPath === 'string') {
+    return (files as Array<{ file_path: string; file_content: string }>).some(
+      (file) => file.file_path === fileOrPath
+    )
+  } else {
+    return (files as File[]).some(
+      (f) => f.name === fileOrPath.name && f.size === fileOrPath.size
+    )
+  }
 }

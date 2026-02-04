@@ -13,7 +13,7 @@ import {
   Mail,
 } from 'lucide-react'
 import React, { useCallback, useEffect, useState } from 'react'
-import * as SimpleIcons from 'simple-icons'
+import { siGithub, siGoogle } from 'simple-icons'
 
 const VIEWS = {
   SIGN_IN: 'sign_in',
@@ -87,7 +87,7 @@ const ProviderIcons: {
       viewBox="0 0 24 24"
       className={className}
       fill="currentColor"
-      dangerouslySetInnerHTML={{ __html: SimpleIcons.siGithub.svg }}
+      dangerouslySetInnerHTML={{ __html: siGithub.svg }}
     />
   ),
   google: ({ className }) => (
@@ -96,7 +96,7 @@ const ProviderIcons: {
       viewBox="0 0 24 24"
       className={className}
       fill="currentColor"
-      dangerouslySetInnerHTML={{ __html: SimpleIcons.siGoogle.svg }}
+      dangerouslySetInnerHTML={{ __html: siGoogle.svg }}
     />
   ),
 }
