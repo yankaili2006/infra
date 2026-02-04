@@ -125,8 +125,25 @@ services:
     restart: unless-stopped
     network_mode: host
 
+  nocodb:
+    image: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/nocodb/nocodb:latest
+    container_name: nocodb
+    ports:
+      - "0.0.0.0:8080:8080"
+    environment:
+      NC_DB: "pg://postgres:5432?u=postgres&p=postgres&d=nocodb"
+      NC_AUTH_JWT_SECRET: "nocodb-jwt-secret-change-in-production"
+      NC_PUBLIC_URL: "http://0.0.0.0:8080"
+      NC_DISABLE_TELE: "true"
+    volumes:
+      - nocodb:/usr/app/data
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
 
 volumes:
   clickhouse: { }
   postgres: { }
   tempo: { }
+  nocodb: { }
