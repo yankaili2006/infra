@@ -68,13 +68,13 @@ export async function POST(req: Request) {
     )
 
     // Map templates to actual E2B template IDs
-    // Note: nextjs-developer-opt has envd initialization issues, using base for now
+    // Note: Use actual template names that exist in the database
     const templateMap: Record<string, string> = {
-      'code-interpreter-v1': 'base',
-      'nextjs-developer-dev': 'base',  // TODO: Fix nextjs-developer-opt template envd issues
-      'vue-developer-dev': 'base',
-      'streamlit-developer-dev': 'base',
-      'gradio-developer-dev': 'base',
+      // 'code-interpreter-v1': 'base',  // FIXED: Use actual code-interpreter-v1 template with Python3
+      'nextjs-developer-dev': 'nextjs-developer-opt',  // FIXED: Map to actual registered template (envd works correctly)
+      'vue-developer-dev': 'base',  // TODO: Create vue-developer template
+      'streamlit-developer-dev': 'base',  // TODO: Create streamlit-developer template
+      'gradio-developer-dev': 'base',  // TODO: Create gradio-developer template
     }
     const actualTemplate = templateMap[fragment.template] || fragment.template
     console.log(`Using template: ${actualTemplate} (requested: ${fragment.template})`)

@@ -2,6 +2,367 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 🚨 Orchestrator Sudo Environment Preservation Issue (February 4, 2026)
+
+### Issue Summary
+
+**Status**: ✅ **RESOLVED**
+
+**Problem**: Orchestrator service failed to start with sudo environment preservation error, preventing Fragments preview functionality from working.
+
+**Error Message**:
+```
+sudo: sorry, you are not allowed to preserve the environment
+```
+
+### Symptoms
+
+1. **Orchestrator Service Failing**:
+   - Nomad job status showed "failed" allocations
+   - Service repeatedly restarting and failing
+   - No running orchestrator instances
+
+2. **Error in Logs**:
+   ```
+   sudo: sorry, you are not allowed to preserve the environment
+   ```
+
+3. **Impact**:
+   - Fragments application could not create sandboxes
+   - Preview functionality completely broken
+   - All VM creation requests failed
+
+### Root Cause Analysis
+
+**File**: `/mnt/data1/pcloud/infra/local-deploy/jobs/orchestrator.hcl`
+**Line**: 47
+
+The orchestrator HCL configuration used `sudo -E` flag to preserve environment variables:
+
+```hcl
+config {
+  command = "sudo"
+  args    = ["-E", "/mnt/data1/pcloud/infra/local-deploy/scripts/start-orchestrator.sh"]
+}
+```
+
+**Why This Failed**:
+1. The `-E` flag requires `SETENV` permission in sudoers configuration
+2. Multiple attempts to configure sudoers with `NOPASSWD:SETENV:` failed
+3. The `Defaults!... !env_reset` directive also didn't resolve the issue
+
+**Why `-E` Was Unnecessary**:
+1. Environment variables are already set in the Nomad job's `env` block (lines 50-91)
+2. The `start-orchestrator.sh` script loads additional environment variables from config files
+3. Using `-E` added unnecessary complexity and permission requirements
+
+### Solution Applied
+
+**File Modified**: `/mnt/data1/pcloud/infra/local-deploy/jobs/orchestrator.hcl` (line 47)
+
+```hcl
+# BEFORE (WRONG - requires SETENV permission)
+config {
+  command = "sudo"
+  args    = ["-E", "/mnt/data1/pcloud/infra/local-deploy/scripts/start-orchestrator.sh"]
+}
+
+# AFTER (CORRECT - no environment preservation needed)
+config {
+  command = "sudo"
+  args    = ["/mnt/data1/pcloud/infra/local-deploy/scripts/start-orchestrator.sh"]
+}
+```
+
+**Deployment Steps**:
+1. Edited orchestrator.hcl to remove `-E` flag
+2. Restarted orchestrator service: `nomad job stop orchestrator && nomad job run jobs/orchestrator.hcl`
+3. Verified service started successfully
+4. Tested Fragments preview functionality
+
+### Verification
+
+**Orchestrator Status**:
+```bash
+$ nomad job status orchestrator
+Status = running
+Running = 1
+Failed = 0
+```
+
+**Orchestrator Logs** (No sudo errors):
+```
+INFO  VNC port forwarding established
+INFO  Native Go TCP proxy network bridge established successfully
+INFO  Socat bridge setup successful
+INFO  SandboxService/List/unary [OK]: finished call
+```
+
+**Fragments Preview Test**:
+```bash
+$ curl -X POST http://localhost:3001/api/sandbox \
+  -H "Content-Type: application/json" \
+  -d '{"fragment":{"template":"code-interpreter-v1","code":"print(\"Hello World\")\nprint(\"2 + 2 =\", 2 + 2)"}}'
+
+{
+  "sbxId": "ijokc68vu967pxm6ye2np",
+  "template": "code-interpreter-v1",
+  "stdout": ["Hello World\n2 + 2 = 4\n"],
+  "stderr": []
+}
+```
+
+✅ **All tests passed - preview functionality fully restored**
+
+### Key Learnings
+
+⭐⭐⭐ **Don't Over-Complicate Sudo Configuration**
+- The `-E` flag adds unnecessary complexity and permission requirements
+- If environment variables are already set in the job definition, `-E` is redundant
+- Simpler sudo configurations are more reliable and easier to maintain
+
+⭐⭐ **Environment Variables in Nomad Jobs**
+- Nomad's `env` block already passes environment variables to the task
+- The executed script can load additional variables from config files
+- No need to preserve the calling environment with `-E`
+
+⭐ **Sudoers Configuration Pitfalls**
+- `NOPASSWD:SETENV:` syntax is tricky and error-prone
+- `Defaults!... !env_reset` doesn't always work as expected
+- Simpler is better: avoid `-E` if possible
+
+⭐ **Debugging Sudo Issues**
+- Check allocation logs for exact error messages
+- Verify the actual command being executed
+- Test sudo commands manually before adding to job definitions
+
+### Automated Fix Script
+
+**Location**: `/mnt/data1/pcloud/infra/local-deploy/scripts/fix-orchestrator-sudo.sh`
+
+**Usage**:
+```bash
+cd /mnt/data1/pcloud/infra/local-deploy/scripts
+./fix-orchestrator-sudo.sh
+```
+
+**What It Does**:
+1. ✅ Checks orchestrator status
+2. ✅ Creates backup of HCL file
+3. ✅ Removes `-E` flag from sudo command
+4. ✅ Restarts orchestrator service
+5. ✅ Verifies service is running
+6. ✅ Checks logs for errors
+7. ✅ Provides test command for Fragments
+
+**Documentation**: See `README-orchestrator-sudo-fix.md` in the same directory for detailed manual steps and troubleshooting.
+
+### Related Files
+
+| File | Purpose |
+|------|---------|
+| `/mnt/data1/pcloud/infra/local-deploy/jobs/orchestrator.hcl` | Orchestrator job definition (line 47 modified) |
+| `/mnt/data1/pcloud/infra/local-deploy/scripts/start-orchestrator.sh` | Orchestrator startup script |
+| `/mnt/data1/pcloud/infra/local-deploy/scripts/fix-orchestrator-sudo.sh` | Automated fix script |
+| `/mnt/data1/pcloud/infra/local-deploy/scripts/README-orchestrator-sudo-fix.md` | Detailed documentation |
+| `/etc/sudoers.d/e2b-orchestrator` | Sudoers configuration (unchanged) |
+
+### Prevention
+
+To prevent similar issues in the future:
+
+1. **Avoid `-E` flag**: Only use when absolutely necessary
+2. **Use Nomad env block**: Define environment variables in job specification
+3. **Test sudo commands**: Verify manually before adding to job definitions
+4. **Keep sudoers simple**: Minimize special permissions and configurations
+5. **Document assumptions**: Clearly note why sudo is needed and what permissions are required
+
+### Quick Reference
+
+**Check orchestrator status**:
+```bash
+nomad job status orchestrator
+```
+
+**View orchestrator logs**:
+```bash
+ALLOC_ID=$(nomad job allocs orchestrator | grep running | head -1 | awk '{print $1}')
+nomad alloc logs $ALLOC_ID orchestrator 2>&1 | tail -50
+```
+
+**Test Fragments preview**:
+```bash
+curl -X POST http://localhost:3001/api/sandbox \
+  -H "Content-Type: application/json" \
+  -d '{"fragment":{"template":"code-interpreter-v1","code":"print(\"Hello\")"}}'
+```
+
+**Status**: ✅ **Issue resolved. Automated fix script created. February 4, 2026.**
+
+---
+
+## 🚨 Code-Interpreter Template Python3 Execution Issue (February 3, 2026)
+
+### Issue Summary
+
+**Status**: ✅ **RESOLVED**
+
+**Problem**: Python3 code execution failed in code-interpreter-v1 template with "No such file or directory" error, even though Python3 was installed in the template rootfs.
+
+**Error Message**:
+```
+/bin/bash: line 1: /usr/bin/python3: No such file or directory
+exitCode: 127
+```
+
+### Root Cause Analysis
+
+The issue was NOT with the rootfs, NBD provider, or Python3 installation. The problem was in the Fragments application code.
+
+**File**: `/mnt/data1/pcloud/infra/fragments/app/api/sandbox/route.ts`
+**Line**: 73
+
+```typescript
+const templateMap: Record<string, string> = {
+  'code-interpreter-v1': 'base',  // ← This forced base template!
+  // ...
+}
+```
+
+**What Was Happening**:
+1. ✅ Python3.10 exists in code-interpreter-v1 template rootfs (verified with debugfs)
+2. ✅ Database has code-interpreter-v1 properly registered with status "uploaded"
+3. ✅ NBD provider working correctly
+4. ❌ Fragments hardcoded mapping forced code-interpreter-v1 → base template
+5. ❌ Base template doesn't have Python3 installed
+
+### Solution
+
+**File Modified**: `/mnt/data1/pcloud/infra/fragments/app/api/sandbox/route.ts` (line 73)
+
+```typescript
+// BEFORE (WRONG - forced base template)
+const templateMap: Record<string, string> = {
+  'code-interpreter-v1': 'base',
+  // ...
+}
+
+// AFTER (CORRECT - use actual template)
+const templateMap: Record<string, string> = {
+  // 'code-interpreter-v1': 'base',  // FIXED: Use actual code-interpreter-v1 template with Python3
+  // ...
+}
+```
+
+Commented out the template mapping line so code-interpreter-v1 uses its actual template with Python3.
+
+### Verification
+
+After the fix, Python3 execution works correctly:
+
+```bash
+curl -X POST http://localhost:3001/api/sandbox \
+  -H "Content-Type: application/json" \
+  -d '{"fragment":{"template":"code-interpreter-v1","code":"import sys\nprint(f\"Python {sys.version}\")\nprint(\"Math test:\", 10 * 5 + 3)"}}'
+```
+
+**Result**:
+```json
+{
+  "sbxId": "...",
+  "template": "code-interpreter-v1",
+  "stdout": ["Python 3.10.12 (main, Jan  8 2026, 06:52:19) [GCC 11.4.0]\nMath test: 53\n"],
+  "stderr": []
+}
+```
+
+### Key Learnings
+
+⭐⭐⭐ **Check Application-Level Template Mappings**
+- Template issues may not be in infrastructure but in application code
+- Fragments had a hardcoded fallback that overrode the correct template
+- Always check the full request path from frontend to VM
+
+⭐⭐ **Verify Actual Template Used**
+- Check logs for "Using template: X (requested: Y)" messages
+- If X ≠ Y, there's a mapping or fallback happening
+- Database registration alone doesn't guarantee template is used
+
+⭐ **Debugging Process**
+- Verified Python3 exists in storage rootfs with debugfs ✅
+- Verified NBD provider working correctly ✅
+- Verified database has correct template registration ✅
+- Found the issue in application-level template mapping ✅
+
+**Status**: ✅ **Code-interpreter template fully functional with Python3 support. February 3, 2026.**
+
+---
+
+## 🔧 Next.js Template Naming Inconsistency Fix (February 3, 2026)
+
+### Issue Summary
+
+**Status**: ✅ **RESOLVED**
+
+**Problem**: Fragments application used `nextjs-developer-dev` template name, but the actual registered template in the database was `nextjs-developer-opt`. This caused unnecessary fallback to the base template.
+
+### Root Cause Analysis
+
+**Template Naming Mismatch**:
+1. Database has template registered as `nextjs-developer-opt` ✅
+2. Fragments code referenced `nextjs-developer-dev` (non-existent) ❌
+3. Code had hardcoded mapping: `'nextjs-developer-dev': 'base'`
+4. Comment claimed "nextjs-developer-opt has envd initialization issues" (outdated)
+
+**Verification**:
+- Template files exist at `/mnt/data1/e2b-storage/e2b-template-storage/a4dc1955-99d2-4f59-a7f4-613d74357b74/`
+- Sandbox creation works: `curl -X POST http://localhost:3000/sandboxes -d '{"templateID": "nextjs-developer-opt"}'` → Success
+- envd responds correctly: `curl http://10.11.0.4:49983/health` → HTTP 204 ✅
+
+### Solution
+
+**File Modified**: `/mnt/data1/pcloud/infra/fragments/app/api/sandbox/route.ts` (line 74)
+
+```typescript
+// BEFORE (WRONG - mapped to base template)
+const templateMap: Record<string, string> = {
+  'nextjs-developer-dev': 'base',  // TODO: Fix nextjs-developer-opt template envd issues
+  // ...
+}
+
+// AFTER (CORRECT - mapped to actual registered template)
+const templateMap: Record<string, string> = {
+  'nextjs-developer-dev': 'nextjs-developer-opt',  // FIXED: Map to actual registered template (envd works correctly)
+  // ...
+}
+```
+
+**Changes Made**:
+1. Updated mapping from `'nextjs-developer-dev': 'base'` to `'nextjs-developer-dev': 'nextjs-developer-opt'`
+2. Removed outdated comment about envd initialization issues
+3. Added clarifying comment that envd works correctly
+
+### Key Learnings
+
+⭐⭐⭐ **Verify Template Names Match Database**
+- Always check database for actual registered template IDs
+- Template naming inconsistencies can cause silent fallbacks
+- Test actual template functionality before assuming issues exist
+
+⭐⭐ **Outdated Comments Can Mislead**
+- The comment about "envd initialization issues" was no longer accurate
+- Always verify current behavior, don't trust old comments
+- Update or remove comments when fixing issues
+
+⭐ **Template Mapping Should Be Minimal**
+- Only map when absolutely necessary (missing templates)
+- Document why each mapping exists
+- Regularly audit mappings to remove unnecessary ones
+
+**Status**: ✅ **Next.js template naming fixed. Fragments now correctly uses nextjs-developer-opt template. February 3, 2026.**
+
+---
+
 ## 🚨 Nomad HCL Environment Variable Issue (February 1, 2026)
 
 ### Issue Summary

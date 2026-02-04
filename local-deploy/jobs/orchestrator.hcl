@@ -43,8 +43,8 @@ job "orchestrator" {
       driver = "raw_exec"  # 需要直接访问系统资源
 
       config {
-        command = "/usr/bin/sudo"
-        args = ["/mnt/data1/pcloud/infra/local-deploy/scripts/start-orchestrator.sh"]
+        command = "sudo"
+        args    = ["/mnt/data1/pcloud/infra/local-deploy/scripts/start-orchestrator.sh"]
       }
 
       env {

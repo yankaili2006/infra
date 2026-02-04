@@ -339,7 +339,7 @@ EOF_WRITE_FILE`
       .replace(/"/g, '\\"')
       .replace(/\$/g, '\\$')
 
-    const command = `python3 -c "${escapedCode}"`
+    const command = `/usr/bin/python3 -c "${escapedCode}"`
 
     const result = await this.executeCommand(sandboxID, command)
     console.log(
