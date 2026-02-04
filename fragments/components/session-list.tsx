@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatDistanceToNow } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
-import { MessageSquare, Trash2, Edit2, Plus, Search, X } from 'lucide-react'
+import { MessageSquare, Trash2, Edit2, Plus, Search, X, Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
@@ -36,6 +36,7 @@ export function SessionList({
   const [loading, setLoading] = useState(true)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [renameDialogOpen, setRenameDialogOpen] = useState(false)
+  const [exportDialogOpen, setExportDialogOpen] = useState(false)
   const [selectedSession, setSelectedSession] = useState<ChatSession | null>(null)
   const [newTitle, setNewTitle] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
@@ -143,6 +144,87 @@ export function SessionList({
     setRenameDialogOpen(true)
   }
 
+  // 打开导出对话框
+  const openExportDialog = (session: ChatSession, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setSelectedSession(session)
+    setExportDialogOpen(true)
+  }
+
+  // 导出为 Markdown
+  const exportAsMarkdown = async () => {
+    if (!selectedSession) return
+
+    try {
+      const response = await fetch(`/api/sessions/${selectedSession.id}`)
+      const data = await response.json()
+
+      if (data.success) {
+        const session = data.data
+        let markdown = `# ${session.title}\n\n`
+        markdown += `**创建时间**: ${new Date(session.createdAt).toLocaleString('zh-CN')}\n`
+        markdown += `**更新时间**: ${new Date(session.updatedAt).toLocaleString('zh-CN')}\n`
+        markdown += `**消息数量**: ${session.messageCount}\n`
+        markdown += `**模板**: ${session.template}\n`
+        markdown += `**模型**: ${session.model}\n\n`
+        markdown += `---\n\n`
+
+        session.messages.forEach((msg: any, index: number) => {
+          markdown += `## ${msg.role === 'user' ? '用户' : '助手'} (${new Date(msg.timestamp).toLocaleString('zh-CN')})\n\n`
+          markdown += `${msg.content}\n\n`
+          if (msg.code) {
+            markdown += `\`\`\`\n${msg.code}\n\`\`\`\n\n`
+          }
+        })
+
+        const blob = new Blob([markdown], { type: 'text/markdown' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `${session.title.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '_')}.md`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+
+        setExportDialogOpen(false)
+        setSelectedSession(null)
+      }
+    } catch (error) {
+      console.error('Failed to export as Markdown:', error)
+    }
+  }
+
+  // 导出为 JSON
+  const exportAsJSON = async () => {
+    if (!selectedSession) return
+
+    try {
+      const response = await fetch(`/api/sessions/${selectedSession.id}`)
+      const data = await response.json()
+
+      if (data.success) {
+        const session = data.data
+        const json = JSON.stringify(session, null, 2)
+
+        const blob = new Blob([json], { type: 'application/json' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `${session.title.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '_')}.json`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+
+        setExportDialogOpen(false)
+        setSelectedSession(null)
+      }
+    } catch (error) {
+      console.error('Failed to export as JSON:', error)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -241,6 +323,14 @@ export function SessionList({
                     variant="ghost"
                     size="icon"
                     className="h-7 w-7"
+                    onClick={(e) => openExportDialog(session, e)}
+                  >
+                    <Download className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
                     onClick={(e) => openRenameDialog(session, e)}
                   >
                     <Edit2 className="h-3 w-3" />
@@ -302,6 +392,39 @@ export function SessionList({
             <AlertDialogAction onClick={handleRenameSession}>
               确定
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* 导出对话框 */}
+      <AlertDialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>导出会话</AlertDialogTitle>
+            <AlertDialogDescription>
+              选择导出格式：
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex flex-col gap-2 py-4">
+            <Button
+              variant="outline"
+              className="w-full justify-start"
+              onClick={exportAsMarkdown}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              导出为 Markdown (.md)
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full justify-start"
+              onClick={exportAsJSON}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              导出为 JSON (.json)
+            </Button>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
