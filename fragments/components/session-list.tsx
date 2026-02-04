@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { formatDistanceToNow } from 'date-fns'
+import { formatDistanceToNow, isToday, isYesterday, isThisWeek, isThisMonth } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
-import { MessageSquare, Trash2, Edit2, Plus, Search, X, Download } from 'lucide-react'
+import { MessageSquare, Trash2, Edit2, Plus, Search, X, Download, ChevronDown, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
@@ -40,6 +40,7 @@ export function SessionList({
   const [selectedSession, setSelectedSession] = useState<ChatSession | null>(null)
   const [newTitle, setNewTitle] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
 
   // 加载会话列表
   const loadSessions = async () => {
@@ -69,6 +70,50 @@ export function SessionList({
       (session.preview && session.preview.toLowerCase().includes(query))
     )
   })
+
+  // 按日期分组会话
+  const groupSessionsByDate = (sessions: ChatSession[]) => {
+    const groups: { [key: string]: ChatSession[] } = {
+      '今天': [],
+      '昨天': [],
+      '本周': [],
+      '本月': [],
+      '更早': []
+    }
+
+    sessions.forEach((session) => {
+      const date = new Date(session.updatedAt)
+      if (isToday(date)) {
+        groups['今天'].push(session)
+      } else if (isYesterday(date)) {
+        groups['昨天'].push(session)
+      } else if (isThisWeek(date, { weekStartsOn: 1 })) {
+        groups['本周'].push(session)
+      } else if (isThisMonth(date)) {
+        groups['本月'].push(session)
+      } else {
+        groups['更早'].push(session)
+      }
+    })
+
+    // 过滤掉空分组
+    return Object.entries(groups).filter(([_, sessions]) => sessions.length > 0)
+  }
+
+  const groupedSessions = groupSessionsByDate(filteredSessions)
+
+  // 切换分组折叠状态
+  const toggleGroup = (groupName: string) => {
+    setCollapsedGroups((prev) => {
+      const newSet = new Set(prev)
+      if (newSet.has(groupName)) {
+        newSet.delete(groupName)
+      } else {
+        newSet.add(groupName)
+      }
+      return newSet
+    })
+  }
 
   // 选择会话
   const handleSelectSession = (session: ChatSession) => {
@@ -273,7 +318,7 @@ export function SessionList({
 
       {/* 会话列表 */}
       <ScrollArea className="flex-1">
-        <div className="p-2 space-y-1">
+        <div className="p-2 space-y-3">
           {sessions.length === 0 ? (
             <div className="text-center py-8 text-sm text-muted-foreground">
               暂无会话记录
@@ -283,7 +328,25 @@ export function SessionList({
               未找到匹配的会话
             </div>
           ) : (
-            filteredSessions.map((session) => (
+            groupedSessions.map(([groupName, groupSessions]) => (
+              <div key={groupName} className="space-y-1">
+                {/* 分组标题 */}
+                <div
+                  className="flex items-center gap-2 px-2 py-1 cursor-pointer hover:bg-accent/50 rounded-md transition-colors"
+                  onClick={() => toggleGroup(groupName)}
+                >
+                  {collapsedGroups.has(groupName) ? (
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  )}
+                  <span className="text-xs font-semibold text-muted-foreground uppercase">
+                    {groupName} ({groupSessions.length})
+                  </span>
+                </div>
+
+                {/* 分组会话列表 */}
+                {!collapsedGroups.has(groupName) && groupSessions.map((session) => (
               <div
                 key={session.id}
                 className={`
@@ -344,6 +407,8 @@ export function SessionList({
                     <Trash2 className="h-3 w-3" />
                   </Button>
                 </div>
+              </div>
+                ))}
               </div>
             ))
           )}
